@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用者資料管理 - 行政儀表板</title>
+    <link rel="stylesheet" href="manage_users.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
+        <h2>👥 使用者資料管理與操作儀表板</h2>
+    </div>
+
+    <!-- 數據總覽卡片 -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">總註冊帳號數</div>
+            <div class="kpi-value" id="kpiTotalUsers">0</div>
+        </div>
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-label">待審核帳號</div>
+            <div class="kpi-value" id="kpiPendingUsers">0</div>
+        </div>
+        <div class="kpi-card kpi-info">
+            <div class="kpi-label">今日操作紀錄</div>
+            <div class="kpi-value" id="kpiTodayLogs">0</div>
+        </div>
+    </div>
+
+    <!-- 區塊一：帳號審核與角色管理 -->
+    <section class="dashboard-section">
+        <div class="section-header">
+            <h3>🔑 帳號審核與權限管理</h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th>Email</th>
+                        <th>目前角色</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <tr><td colspan="5">⏳ 載入帳號資料中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 區塊二：系統操作活動紀錄 -->
+    <section class="dashboard-section">
+        <div class="section-header">
+            <h3>📜 系統操作活動紀錄</h3>
+            <button onclick="exportLogsToPDF()" class="btn-pdf">📄 產出 PDF 報表</button>
+        </div>
+
+        <!-- 篩選列 -->
+        <div class="filter-bar">
+            <select id="filterTime" onchange="resetAndRenderLogs()">
+                <option value="all">📅 全部時間</option>
+                <option value="today">今天</option>
+                <option value="3days">近三天</option>
+                <option value="week">本週</option>
+                <option value="month">本月</option>
+                <option value="year">本年</option>
+            </select>
+
+            <select id="filterUser" onchange="resetAndRenderLogs()">
+                <option value="all">👤 所有人員</option>
+            </select>
+
+            <select id="filterAction" onchange="resetAndRenderLogs()">
+                <option value="all">⚡ 所有動作</option>
+                <option value="點名紀錄">點名紀錄</option>
+                <option value="座位調整">座位調整</option>
+                <option value="新增學生">新增學生</option>
+                <option value="編輯學生">編輯學生</option>
+                <option value="移除學生">移除學生</option>
+                <option value="轉班/異動">轉班/異動</option>
+                <option value="班級管理">班級管理</option>
+                <option value="帳號審核">帳號審核</option>
+            </select>
+
+            <input type="text" id="filterKeyword" placeholder="🔍 搜尋操作詳情關鍵字..." oninput="resetAndRenderLogs()">
+        </div>
+
+        <div class="log-meta-info" id="logCountInfo">載入中...</div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 18%;">操作時間</th>
+                        <th style="width: 15%;">操作人員</th>
+                        <th style="width: 15%;">執行動作</th>
+                        <th style="width: 52%;">操作詳情</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr><td colspan="4">⏳ 載入操作紀錄中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="load-more-wrap" id="loadMoreWrap" style="display: none;">
+            <button onclick="loadMoreLogs()" class="btn-load-more">⬇ 顯示更多紀錄 (+100筆)</button>
+        </div>
+    </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="logger.js"></script>
+<script src="manage_users.js"></script>
+</body>
+</html>

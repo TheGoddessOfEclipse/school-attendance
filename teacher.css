@@ -1,0 +1,43 @@
+:root { --primary: #3498db; --bg: #f4f7f6; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 10px; }
+
+/* RWD 容器設定 */
+.container { width: 100%; max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
+
+.category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.btn-category { padding: 15px 5px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
+.btn-category:hover { background: #2980b9; transform: translateY(-2px); }
+
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+.btn-back { padding: 8px 15px; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 5px; font-weight: bold; }
+.date-picker { padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; flex-grow: 1; text-align: center; }
+
+select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 20px; box-sizing: border-box; }
+
+.student-card { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 12px; border-radius: 8px; background: #fafafa; transition: background 0.3s; box-sizing: border-box; }
+.student-card.processed { background-color: #e0e0e0; border-color: #bdc3c7; opacity: 0.9; }
+
+.student-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333; display: flex; justify-content: space-between; }
+
+/* 狀態按鈕 RWD */
+.status-btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+.status-btns button { padding: 10px 2px; border: 1px solid #ccc; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%; }
+
+.status-btns button.active[data-val="出席"] { background: #2ecc71; color: white; border-color: #2ecc71; }
+.status-btns button.active[data-val="無故缺席"] { background: #e74c3c; color: white; border-color: #e74c3c; }
+.status-btns button.active[data-val="部分出席"] { background: #9b59b6; color: white; border-color: #9b59b6; }
+.status-btns button.active.yellow-alert { background: #f1c40f; color: #333; border-color: #f1c40f; }
+
+.input-group { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.text-input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.time-group { display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border: 1px solid #9b59b6; border-radius: 6px; }
+.time-group input { flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+
+.btn-submit { width: 100%; padding: 15px; background-color: #2c3e50; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+
+/* RWD 微調手機版 */
+@media (max-width: 400px) {
+    .time-group { flex-direction: column; align-items: flex-start; }
+    .time-group label { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+}

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校園點名系統 - 行政監控端</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>
+        🛡️ 行政巡堂與座位監控
+        <span style="font-size: 14px; color: #7f8c8d;" id="lastUpdate">等待更新...</span>
+    </h2>
+
+    <div id="step1">
+        <h3 style="text-align: center; color: #555; margin-top: 20px;">請選擇監控類別</h3>
+        <div class="category-grid">
+            <button class="btn-category" onclick="selectAdminCategory('周間普通班')">周間普通班</button>
+            <button class="btn-category" onclick="selectAdminCategory('周間分組班(數)')">周間分組班(數)</button>
+            <button class="btn-category" onclick="selectAdminCategory('周間分組班(英)')">周間分組班(英)</button>
+            <button class="btn-category" onclick="selectAdminCategory('周間分組班(自)')">周間分組班(自)</button>
+            <button class="btn-category" onclick="selectAdminCategory('周間晚自習')">周間晚自習</button>
+            <button class="btn-category" onclick="selectAdminCategory('週六假日班')">週六假日班</button>
+            <button class="btn-category" onclick="selectAdminCategory('週六資優班')">週六資優班</button>
+            <button class="btn-category" onclick="selectAdminCategory('校隊')">校隊</button>
+            <button class="btn-category" onclick="selectAdminCategory('社團')">社團</button>
+        </div>
+    </div>
+
+    <div id="step2" style="display: none;">
+        <div class="top-bar">
+            <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
+            <button onclick="goBack()" class="btn-back" style="background:#34495e;">重新選類別</button>
+            <input type="date" id="adminDateSelect" class="date-picker" onchange="loadSeatingChart()">
+        </div>
+
+        <div class="admin-panel">
+            <strong id="adminCategoryTitle" style="color: var(--primary); margin-right: 10px;"></strong>
+            <select id="adminClassSelect" onchange="loadSeatingChart()"></select>
+        </div>
+
+        <h3 class="board-title">黑板 / 講台</h3>
+        <div class="chart-container">
+            <div class="seating-chart" id="seatingChart"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 彈跳視窗 (Modal) -->
+<div id="statusModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="modalStuName" style="margin-top:0; color:#2c3e50;">修改狀態</h3>
+        <label class="modal-label">點名狀態：</label>
+        <select id="modalStatusSelect" class="modal-input">
+            <option value="出席">出席</option>
+            <option value="無故缺席">無故缺席</option>
+            <option value="部分出席">部分出席</option>
+            <option value="病假">病假</option>
+            <option value="喪假">喪假</option>
+            <option value="事假">事假</option>
+            <option value="因故缺席">因故缺席</option>
+            <option value="未點名">未點名</option>
+        </select>
+        <div id="modalTimeGroup" class="time-group" style="display:none; margin-bottom:10px;">
+            <label>入校 <input type="time" id="modalTimeIn"></label>
+            <label>離校 <input type="time" id="modalTimeOut"></label>
+        </div>
+        <input type="text" id="modalReason" class="modal-input" placeholder="請輸入缺席原因" style="display:none;">
+        <label class="modal-label">備註事項：</label>
+        <input type="text" id="modalNote" class="modal-input" placeholder="輸入備註 (選填)">
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="saveAdminStatus()" class="btn-add" style="flex:1; padding:10px;">💾 儲存</button>
+            <button onclick="closeModal()" class="btn-back" style="flex:1; margin-bottom:0; padding:10px;">❌ 取消</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="logger.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校園點名系統 - 教師端</title>
+    <link rel="stylesheet" href="teacher.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>📱 教師點名端</h2>
+    
+    <div id="step1">
+        <h3 style="text-align: center; color: #555;">請選擇課程類別</h3>
+        <div class="category-grid">
+            <button class="btn-category" onclick="selectCategory('周間普通班')">周間普通班</button>
+            <button class="btn-category" onclick="selectCategory('周間分組班(數)')">周間分組班(數)</button>
+            <button class="btn-category" onclick="selectCategory('周間分組班(英)')">周間分組班(英)</button>
+            <button class="btn-category" onclick="selectCategory('周間分組班(自)')">周間分組班(自)</button>
+            <button class="btn-category" onclick="selectCategory('周間晚自習')">周間晚自習</button>
+            <button class="btn-category" onclick="selectCategory('週六假日班')">週六假日班</button>
+            <button class="btn-category" onclick="selectCategory('週六資優班')">週六資優班</button>
+            <button class="btn-category" onclick="selectCategory('校隊')">校隊</button>
+            <button class="btn-category" onclick="selectCategory('社團')">社團</button>
+        </div>
+    </div>
+
+    <div id="step2" style="display: none;">
+        <div class="top-bar">
+            <button onclick="goBack()" class="btn-back">⬅ 返回</button>
+            <input type="date" id="dateSelect" class="date-picker" onchange="renderStudents()">
+        </div>
+        
+        <h3 id="selectedCategoryTitle" style="color: var(--primary);"></h3>
+        <select id="classSelect" onchange="renderStudents()"></select>
+        
+        <div id="studentList"></div>
+        <button class="btn-submit" onclick="submitAttendance()">送出點名資料</button>
+    </div>
+</div>
+
+<!-- 🌟 確保這三行存在，才能連上雲端 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="teacher"></script>
+<script src="logger.js"></script>
+<script src="teacher.js"></script>
+</body>
+</html>

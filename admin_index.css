@@ -1,0 +1,48 @@
+:root { --bg: #2c3e50; --card-bg: #ffffff; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+
+.container { width: 100%; max-width: 900px; background: var(--card-bg); padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
+h2 { color: #2c3e50; margin-top: 0; border-bottom: 3px solid #3498db; display: inline-block; padding-bottom: 10px; }
+.subtitle { color: #7f8c8d; font-size: 16px; margin-bottom: 30px; }
+
+/* RWD 網格選單 */
+.menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+
+.menu-card { display: block; padding: 30px 20px; border-radius: 12px; text-decoration: none; color: white; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.menu-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+.menu-card h3 { margin: 10px 0; font-size: 22px; }
+.menu-card p { font-size: 14px; opacity: 0.9; margin: 0; line-height: 1.5; }
+.icon { font-size: 40px; margin-bottom: 10px; }
+
+/* 個別卡片顏色 */
+.attendance-card { background: linear-gradient(135deg, #3498db, #2980b9); }
+.class-card { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.student-card { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+
+@media (max-width: 600px) {
+    .container { padding: 20px; }
+    .menu-card { padding: 20px 15px; }
+}
+
+/* 返回大廳按鈕 */
+.top-nav {
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+.btn-lobby {
+    display: inline-block;
+    text-decoration: none;
+    background: #ecf0f1;
+    color: #2c3e50;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.btn-lobby:hover {
+    background: #d5dbdb;
+    transform: translateY(-1px);
+}

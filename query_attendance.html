@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點名資料查詢</title>
+    <link rel="stylesheet" href="query_attendance.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
+        <h2>📊 點名資料查詢系統</h2>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th width="12%">點名日期</th>
+                    <th width="15%">班級種類</th>
+                    <th width="12%">班級名稱</th>
+                    <th width="15%">最後更新時間</th>
+                    <th width="18%">到席率</th>
+                    <th width="18%">未到清單</th>
+                    <th width="10%">操作</th>
+                </tr>
+            </thead>
+            <tbody id="queryTableBody">
+                <tr><td colspan="7">⏳ 雲端資料計算中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 載入 Firebase 與設定 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="query_attendance.js"></script>
+</body>
+</html>

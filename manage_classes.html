@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級資料管理</title>
+    <link rel="stylesheet" href="manage_students.css">
+    <style>
+        .autocomplete-items { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-top: none; z-index: 99; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .autocomplete-items div { padding: 10px; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; font-size: 14px; }
+        .autocomplete-items div:hover { background-color: #f0f4f8; }
+        .badge-num { color: #2980b9; font-family: monospace; font-weight: bold; }
+        .badge-class { font-size: 12px; background: #8e44ad; color: white; padding: 2px 6px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
+        <h2>🏫 班級資料管理</h2>
+        <a href="manage_students.html" class="btn-back" style="margin-left:auto; background:#16a085;">前往學生總檔 ➔</a>
+    </div>
+
+    <div class="control-panel">
+        <select id="categorySelect" onchange="updateClassSelect()">
+            <option value="周間普通班">周間普通班</option>
+            <option value="周間分組班(數)">周間分組班(數)</option>
+            <option value="周間分組班(英)">周間分組班(英)</option>
+            <option value="周間分組班(自)">周間分組班(自)</option>
+            <option value="周間晚自習">周間晚自習</option>
+            <option value="週六假日班">週六假日班</option>
+            <option value="週六資優班">週六資優班</option>
+            <option value="校隊">校隊</option>
+            <option value="社團">社團</option>
+        </select>
+        
+        <div class="class-controls">
+            <select id="classSelect" onchange="renderClassStudents()"></select>
+            <button onclick="addClass()" class="btn-icon" title="新增單一班級">➕</button>
+            <!-- 🌟 新增：批量建立班級按鈕 -->
+            <button onclick="openBulkClassModal()" class="btn-icon" style="background:#27ae60; color:white; width:auto; padding-left:10px; padding-right:10px; font-size:14px; white-space:nowrap;" title="批量建立多個班級">📑 批量建班</button>
+            <button onclick="editClass()" class="btn-icon btn-edit-class" id="btnEditClass" title="修改班級名稱">✏️</button>
+            <button onclick="deleteClass()" class="btn-icon btn-delete-class" id="btnDeleteClass" title="刪除班級">🗑️</button>
+        </div>
+    </div>
+
+    <div class="add-panel">
+        <div style="position: relative; flex: 1; display: flex; flex-direction: column;">
+            <input type="text" id="studentSearchInput" placeholder="🔍 輸入「學號」或「姓名」搜尋全校學生，點擊下方結果即可加入此班..." autocomplete="off" style="width: 100%; box-sizing: border-box;">
+            <div id="searchDropdown" class="autocomplete-items" style="display:none;"></div>
+        </div>
+        <!-- 🌟 新增：批量移入按鈕 -->
+        <button onclick="openBulkAddStuModal()" class="btn-add" style="background:#2980b9;">📥 批量移入</button>
+        <button onclick="bulkRemoveFromClass()" class="btn-add" style="background:#e74c3c;">🗑️ 批量移出本班</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead></thead>
+            <tbody id="classTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 🌟 批量建立班級 Modal -->
+<div id="bulkClassModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 id="bulkClassModalTitle" style="margin-top:0;">📑 批量建立班級</h3>
+        <p style="font-size: 14px; color: #555; line-height: 1.5;">
+            請輸入要建立的班級名稱，<b>一行一個</b>（也可直接從 Excel 複製一整欄貼上，或用逗號分隔）：
+        </p>
+        <textarea id="bulkClassTextarea" rows="8" placeholder="例：&#10;701&#10;702&#10;703&#10;704" style="width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="processBulkAddClasses()" class="btn-add" style="flex:1; background:#27ae60;">開始建立</button>
+            <button onclick="closeBulkClassModal()" class="btn-back" style="flex:1; margin-bottom:0; background:#95a5a6; color:white; border:none; border-radius:5px;">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🌟 批量移入學生 Modal -->
+<div id="bulkAddStuModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+        <h3 id="bulkAddStuTitle" style="margin-top:0;">📥 批量移入學生</h3>
+        <p style="font-size: 14px; color: #555; line-height: 1.5;">
+            請貼上多列<b>「學號」</b>或<b>「學生姓名」</b>（一行一筆，可混用）：<br>
+            <span style="font-size: 12px; color: #7f8c8d;">💡 精準符合將自動加入；若遇同名或查無此人，將跳出視窗供您選擇與確認。</span>
+        </p>
+        <textarea id="bulkAddStuTextarea" rows="9" placeholder="例：&#10;1130001&#10;王小明&#10;陳小華" style="width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="processBulkAddStudents()" class="btn-add" style="flex:1; background:#2980b9;">解析並移入</button>
+            <button onclick="closeBulkAddStuModal()" class="btn-back" style="flex:1; margin-bottom:0; background:#95a5a6; color:white; border:none; border-radius:5px;">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🌟 同名選擇與查無此人確認 Modal -->
+<div id="resolveConflictModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 550px;">
+        <h3 style="margin-top:0; color:#e67e22;">⚠️ 批量移入確認</h3>
+        <div id="resolveSummary" style="font-size: 14px; margin-bottom: 12px; color: #2c3e50;"></div>
+        
+        <div id="duplicateSection" style="display:none; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 8px 0; color: #2980b9;">👥 發現同名學生，請勾選要加入的學生：</h4>
+            <div id="duplicateListContainer" style="max-height: 220px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa;"></div>
+        </div>
+
+        <div id="notFoundSection" style="display:none; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 6px 0; color: #e74c3c;">❌ 資料庫查無以下資料（請確認是否已於「學生資料管理」建檔）：</h4>
+            <div id="notFoundListContainer" style="max-height: 100px; overflow-y: auto; border: 1px solid #f5c6cb; border-radius: 6px; padding: 8px; background: #fff5f5; color: #c0392b; font-size: 13px;"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button id="btnConfirmDuplicates" onclick="confirmDuplicateSelection()" class="btn-add" style="flex:1; background:#27ae60;">確認加入所選學生</button>
+            <button onclick="closeResolveModal()" class="btn-back" style="flex:1; margin-bottom:0; background:#95a5a6; color:white; border:none; border-radius:5px;">關閉</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="logger.js"></script>
+<script src="manage_classes.js"></script>
+</body>
+</html>

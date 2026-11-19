@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行政端首頁 - 校園點名系統</title>
+    <link rel="stylesheet" href="admin_index.css">
+</head>
+<body>
+
+<div class="container">
+    <!-- 🌟 新增：返回大廳按鈕 -->
+    <div class="top-nav">
+        <a href="index.html" class="btn-lobby">🏠 返回系統大廳</a>
+    </div>
+
+    <h2>🏫 校園點名管理系統 - 行政後台</h2>
+    <p class="subtitle">請選擇您要執行的業務</p>
+
+    <div class="menu-grid">
+        <!-- 連結到我們原本做好的 admin.html -->
+        <a href="admin.html" class="menu-card attendance-card">
+            <div class="icon">📋</div>
+            <h3>出席狀況檢視</h3>
+            <p>巡堂座位表、檢視與修改每日點名狀況</p>
+        </a>
+
+        <a href="manage_classes.html" class="menu-card" style="background: linear-gradient(135deg, #8e44ad, #6c3483);">
+            <div class="icon">🏫</div>
+            <h3>班級資料管理</h3>
+            <p>建立與刪除班級、社團、校隊與各科分組名單</p>
+        </a>
+
+        <a href="manage_students.html" class="menu-card" style="background: linear-gradient(135deg, #16a085, #117a65);">
+            <div class="icon">🧑‍🎓</div>
+            <h3>學生資料管理</h3>
+            <p>全校學生總檔、學號管理、跨分類多選與學年升級</p>
+        </a>
+
+        <a href="query_attendance.html" class="menu-card" style="background: linear-gradient(135deg, #e67e22, #d35400);">
+            <div class="icon">📊</div>
+            <h3>點名資料查詢</h3>
+            <p>檢視各班點名狀況、到席率與未到清單</p>
+        </a>
+
+        <a href="manage_users.html" class="menu-card" style="background: linear-gradient(135deg, #2980b9, #1f618d);">
+            <div class="icon">👥</div>
+            <h3>使用者資料管理</h3>
+            <p>審核帳號權限、切換身分角色與檢視全站操作紀錄</p>
+        </a>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="admin_index.js"></script>
+</body>
+</html>
