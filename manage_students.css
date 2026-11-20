@@ -1,46 +1,360 @@
-:root { --primary: #9b59b6; --bg: #f4f7f6; }
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; }
-.container { max-width: 850px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+:root {
+    --bg-dark: #0e1418;
+    --panel-bg: rgba(14, 20, 24, 0.84);
+    --gold: #d4b475;
+    --gold-bright: #ebd29b;
+    --gold-dim: rgba(212, 180, 117, 0.34);
+    --purple: #9b59b6;
+    --text-main: #f4f6f5;
+    --text-muted: #aeb9b6;
+}
 
-.header { display: flex; align-items: center; gap: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.header h2 { margin: 0; color: #2c3e50; }
-.btn-back { text-decoration: none; background: #95a5a6; color: white; padding: 8px 15px; border-radius: 5px; font-weight: bold; }
-.btn-back:hover { background: #7f8c8d; }
+* {
+    box-sizing: border-box;
+}
 
-.control-panel, .add-panel { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; background: #ecf0f1; padding: 15px; border-radius: 8px; align-items: center; }
-/* 🌟 排除 checkbox，避免被強制撐開成 150px */
-select, input:not([type="checkbox"]) { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; min-width: 150px; }
+body {
+    font-family: 'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    color-scheme: dark;
+}
 
-.class-controls { display: flex; flex: 2; gap: 6px; align-items: center; min-width: 250px; }
+/* 固定式走廊暗金＋微紫背景（與行政首頁一致） */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        radial-gradient(circle at 50% 25%, rgba(78, 38, 102, 0.34) 0%, rgba(12, 16, 20, 0.88) 76%),
+        linear-gradient(to bottom, rgba(12, 16, 20, 0.72), rgba(14, 22, 19, 0.94)),
+        url('images/schollhallway.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 主毛玻璃面板 */
+.container {
+    max-width: 900px;
+    margin: 0 auto 30px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 26px;
+    border-radius: 14px;
+    border: 1px solid var(--gold-dim);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    position: relative;
+}
+
+/* 四角細金裝飾線 */
+.container::before,
+.container::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: var(--gold);
+    border-style: solid;
+    pointer-events: none;
+}
+.container::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 14px 0 0 0; }
+.container::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 14px 0; }
+
+/* 標題列 */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--gold-dim);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.header h2 {
+    margin: 0;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.btn-back {
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-back:hover {
+    background: rgba(212, 180, 117, 0.18);
+    border-color: var(--gold);
+    transform: translateY(-1px);
+}
+
+.btn-nav-purple {
+    margin-left: auto;
+    background: linear-gradient(135deg, rgba(142, 68, 173, 0.48), rgba(62, 28, 84, 0.82));
+    color: #f4e8fc;
+    border: 1px solid rgba(187, 143, 206, 0.55);
+}
+
+.btn-nav-purple:hover {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.68), rgba(78, 36, 104, 0.92));
+    border-color: var(--gold);
+    color: #ffffff;
+}
+
+/* 控制與新增功能列 */
+.control-panel,
+.add-panel {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(212, 180, 117, 0.22);
+    padding: 14px 16px;
+    border-radius: 10px;
+    align-items: center;
+}
+
+/* 輸入框與下拉選單（排除 checkbox） */
+select,
+input:not([type="checkbox"]),
+textarea {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(10, 15, 18, 0.72);
+    color: #ffffff;
+    font-size: 14px;
+    min-width: 120px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select option {
+    background: #141c22;
+    color: #ffffff;
+}
+
+select:focus,
+input:not([type="checkbox"]):focus,
+textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(212, 180, 117, 0.18);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: rgba(174, 185, 182, 0.55);
+}
+
+/* 搜尋列 */
+.search-bar-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-bar-row input {
+    flex: 1;
+    min-width: 240px;
+}
+
+.total-count-badge {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--gold-bright);
+    background: rgba(212, 180, 117, 0.12);
+    border: 1px solid var(--gold-dim);
+    padding: 8px 14px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+/* 班級管理相容控制群組 */
+.class-controls {
+    display: flex;
+    flex: 2;
+    gap: 8px;
+    align-items: center;
+    min-width: 250px;
+}
 .class-controls select { flex: 1; margin: 0; }
-.btn-icon { padding: 10px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; background: #2ecc71; color: white; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.btn-icon:hover { filter: brightness(0.9); transform: translateY(-1px); }
-.btn-edit-class { background: #f39c12; }
-.btn-delete-class { background: #e74c3c; }
 
-.readonly-input { background-color: #e0e6ed; color: #7f8c8d; cursor: not-allowed; display: none; width: 90px; flex: none; border: 1px dashed #bdc3c7; }
+.btn-icon {
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    background: rgba(39, 174, 96, 0.35);
+    color: #ffffff;
+    transition: all 0.2s ease;
+}
+.btn-icon:hover { border-color: var(--gold); transform: translateY(-1px); }
+.btn-edit-class { background: rgba(243, 156, 18, 0.35); }
+.btn-delete-class { background: rgba(192, 57, 43, 0.38); }
 
-.btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; flex: none; }
-.btn-add:hover { filter: brightness(0.9); }
+/* 寶石玻璃感功能按鈕 */
+.btn-add {
+    background: linear-gradient(135deg, #d4b475, #a98643);
+    color: #0e1418;
+    border: 1px solid transparent;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    flex: none;
+    transition: all 0.2s ease;
+}
 
-.autocomplete-items { position: absolute; top: 100%; left: 0; right: 0; border: 1px solid #d4d4d4; border-radius: 4px; background-color: white; z-index: 99; max-height: 250px; overflow-y: auto; box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-.autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.autocomplete-items div:hover { background-color: #f4f7f6; }
-.match-text { color: #2980b9; font-weight: bold; }
-.tag-orig { font-size:12px; color:#fff; background:#9b59b6; padding:3px 8px; border-radius:12px; }
+.btn-add:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
 
-.table-container { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 550px; }
-th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-th { background-color: #f8f9fa; color: #2c3e50; font-weight: bold; }
-tr:nth-child(even) { background-color: #fcfcfc; }
+.btn-emerald {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.42), rgba(20, 68, 44, 0.85));
+    color: #e4faec;
+    border-color: rgba(46, 204, 113, 0.55);
+}
+.btn-emerald:hover { border-color: var(--gold); }
 
-/* 🌟 勾選欄隨螢幕動態縮放且保持精簡 */
+.btn-crimson {
+    background: linear-gradient(135deg, rgba(192, 57, 43, 0.45), rgba(78, 22, 18, 0.85));
+    color: #fde8e6;
+    border-color: rgba(231, 76, 60, 0.55);
+}
+.btn-crimson:hover { border-color: var(--gold); }
+
+.btn-amber {
+    background: linear-gradient(135deg, rgba(212, 140, 36, 0.42), rgba(82, 50, 14, 0.85));
+    color: #fdf0d5;
+    border-color: rgba(243, 156, 18, 0.55);
+}
+.btn-amber:hover { border-color: var(--gold); }
+
+/* Autocomplete 下拉（班級管理共用） */
+.autocomplete-items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    background-color: rgba(16, 22, 26, 0.98);
+    z-index: 99;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+}
+.autocomplete-items div {
+    padding: 11px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f4f6f5;
+}
+.autocomplete-items div:hover { background-color: rgba(212, 180, 117, 0.14); }
+.badge-num { color: var(--gold-bright) !important; font-family: monospace; font-weight: bold; }
+.badge-class { font-size: 12px; background: rgba(142, 68, 173, 0.4); border: 1px solid rgba(187, 143, 206, 0.5); color: #f4e8fc; padding: 2px 8px; border-radius: 10px; }
+
+/* 表格區（支援固定表頭與細金捲軸） */
+.table-container {
+    overflow: auto;
+    max-height: 62vh;
+    border-radius: 10px;
+    border: 1px solid rgba(212, 180, 117, 0.24);
+    background: rgba(8, 12, 15, 0.52);
+}
+
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-container::-webkit-scrollbar-track {
+    background: rgba(10, 15, 18, 0.8);
+}
+.table-container::-webkit-scrollbar-thumb {
+    background: rgba(212, 180, 117, 0.35);
+    border-radius: 4px;
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 180, 117, 0.65);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+th, td {
+    border: 1px solid rgba(212, 180, 117, 0.13);
+    padding: 11px 12px;
+    text-align: center;
+    font-size: 14px;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(22, 24, 34, 0.96);
+    color: var(--gold-bright);
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    border-bottom: 1.5px solid var(--gold-dim);
+}
+
+tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.025);
+}
+
+tbody tr:hover {
+    background-color: rgba(212, 180, 117, 0.06);
+}
+
+/* 覆寫原本深藍色學號，改為亮金色提升暗底對比 */
+#studentTableBody td:nth-child(2) {
+    color: var(--gold-bright) !important;
+}
+
+/* 勾選欄精簡寬度 */
 .table-container table th:first-child,
 .table-container table td:first-child {
     width: 1% !important;
     white-space: nowrap;
-    padding: 8px 1vw !important;
+    padding: 8px 12px !important;
     text-align: center;
 }
 
@@ -52,18 +366,158 @@ input[type="checkbox"] {
     margin: 0;
     cursor: pointer;
     vertical-align: middle;
+    accent-color: var(--gold);
 }
 
-.action-btns button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 0 3px; color: white; }
-.btn-edit { background: #f39c12; }
-.btn-edit:hover { background: #e67e22; }
-.btn-delete { background: #e74c3c; }
-.btn-delete:hover { background: #c0392b; }
+/* 表格內可點擊分類格與標籤 */
+.clickable-cell {
+    cursor: pointer;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+}
 
-/* 🌟 彈跳視窗樣式 */
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
-.modal-content { background: white; width: 90%; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.clickable-cell:hover {
+    background-color: rgba(142, 68, 173, 0.24) !important;
+    box-shadow: inset 0 0 0 1px rgba(212, 180, 117, 0.5);
+}
+
+.tag-pill {
+    display: inline-block;
+    background: rgba(142, 68, 173, 0.32);
+    color: #f3e6fa;
+    border: 1px solid rgba(187, 143, 206, 0.55);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 2px;
+}
+
+.tag-empty {
+    color: rgba(174, 185, 182, 0.38);
+    font-size: 12px;
+}
+
+/* 列操作按鈕 */
+.action-btns {
+    white-space: nowrap;
+}
+
+.action-btns button {
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 0 3px;
+    color: #ffffff;
+    transition: all 0.18s ease;
+}
+
+.btn-edit {
+    background: rgba(243, 156, 18, 0.28);
+    border: 1px solid rgba(243, 156, 18, 0.6);
+}
+.btn-edit:hover {
+    background: rgba(243, 156, 18, 0.52);
+    border-color: var(--gold);
+}
+
+.btn-delete {
+    background: rgba(231, 76, 60, 0.28);
+    border: 1px solid rgba(231, 76, 60, 0.6);
+}
+.btn-delete:hover {
+    background: rgba(231, 76, 60, 0.55);
+    border-color: #ff8a80;
+}
+
+/* 彈跳視窗（蓋過 navbar 層級） */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 12, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.modal-content {
+    background: rgba(16, 22, 26, 0.96);
+    color: var(--text-main);
+    width: 100%;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--gold-dim);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+}
+
+.modal-content h3 {
+    margin: 0 0 10px 0;
+    font-family: 'Noto Serif TC', serif;
+    color: var(--gold-bright);
+    letter-spacing: 1px;
+}
+
+.modal-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin: 0 0 12px 0;
+}
+
+.modal-highlight {
+    color: var(--gold-bright);
+    font-weight: 700;
+}
+
+.checkbox-list {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid rgba(212, 180, 117, 0.25);
+    border-radius: 8px;
+    padding: 8px;
+    margin: 12px 0;
+    text-align: left;
+    background: rgba(10, 14, 18, 0.65);
+}
+
+.checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-main);
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.checkbox-list label:last-child {
+    border-bottom: none;
+}
+
+.checkbox-list label:hover {
+    background: rgba(212, 180, 117, 0.12);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.modal-actions button {
+    flex: 1;
+}
 
 @media (max-width: 600px) {
+    body { padding: 12px; }
+    .container { padding: 18px 14px; }
     .class-controls { min-width: 100%; }
+    .btn-nav-purple { margin-left: 0; }
 }

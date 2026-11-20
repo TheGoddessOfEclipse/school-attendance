@@ -4,16 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>學生資料管理</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="manage_students.css">
     <style>
-        .container { max-width: 1350px; }
-        .clickable-cell { cursor: pointer; transition: background 0.15s; }
-        .clickable-cell:hover { background-color: #eaf2f8; }
-        .tag-pill { display: inline-block; background: #e8f4fd; color: #2980b9; border: 1px solid #aed6f1; padding: 2px 7px; border-radius: 12px; font-size: 12px; margin: 2px; }
-        .tag-empty { color: #bdc3c7; font-size: 12px; }
-        .checkbox-list { max-height: 280px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 10px; margin: 10px 0; text-align: left; }
-        .checkbox-list label { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; font-size: 15px; }
-        .checkbox-list label:hover { background: #f9f9f9; }
+        .container { max-width: 1400px; }
     </style>
 </head>
 <body>
@@ -22,49 +18,33 @@
     <div class="header">
         <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
         <h2>🧑‍🎓 學生資料管理（全校總檔）</h2>
-        <a href="manage_classes.html" class="btn-back" style="margin-left:auto; background:#8e44ad;">前往班級管理 ➔</a>
+        <a href="manage_classes.html" class="btn-back btn-nav-purple">前往班級管理 ➔</a>
     </div>
 
     <!-- 單筆新增與功能列 -->
-    <div class="add-panel" style="flex-wrap: wrap;">
-        <input type="text" id="newStuNumber" placeholder="學號(必填)" style="width: 110px; flex:none;">
-        <input type="text" id="newStuName" placeholder="姓名(必填)" style="width: 110px; flex:none;">
-        <select id="newStuHomeroom" style="width: 120px; flex:none;"></select>
-        <input type="text" id="newStuSeat" placeholder="座號(例:01)" style="width: 90px; flex:none;">
-        
+    <div class="add-panel">
+        <input type="text" id="newStuNumber" placeholder="學號(必填)" style="width: 115px; flex:none;">
+        <input type="text" id="newStuName" placeholder="姓名(必填)" style="width: 115px; flex:none;">
+        <select id="newStuHomeroom" style="width: 130px; flex:none;"></select>
+        <input type="text" id="newStuSeat" placeholder="座號(例:01)" style="width: 100px; flex:none;">
+
         <button onclick="addMasterStudent()" class="btn-add">➕ 新增學生</button>
-        <button onclick="openBulkModal()" class="btn-add" style="background:#27ae60;">📊 批量匯入</button>
-        <button onclick="bulkDeleteMasterStudents()" class="btn-add" style="background:#e74c3c;">🗑️ 批量刪除</button>
-        <button onclick="upgradeAcademicYear()" class="btn-add" style="background:#e67e22;">🎓 學年自動升級</button>
+        <button onclick="openBulkModal()" class="btn-add btn-emerald">📊 批量匯入</button>
+        <button onclick="bulkDeleteMasterStudents()" class="btn-add btn-crimson">🗑️ 批量刪除</button>
+        <button onclick="upgradeAcademicYear()" class="btn-add btn-amber">🎓 學年自動升級</button>
     </div>
 
     <!-- 即時搜尋列 -->
-    <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-        <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 搜尋學號、姓名、班級、校隊或社團...（點擊表格內各分類格子可直接多選修改）" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px;">
-        <span id="totalCount" style="font-weight:bold; color:#555; white-space:nowrap;"></span>
+    <div class="search-bar-row">
+        <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 搜尋學號、姓名、班級、校隊或社團...（點擊表格內各分類格子可直接多選修改）">
+        <span id="totalCount" class="total-count-badge"></span>
     </div>
 
     <div class="table-container">
         <table>
-            <thead>
-                <tr style="white-space: nowrap;">
-                    <th width="4%"><input type="checkbox" onchange="toggleSelectAll(this)"></th>
-                    <th>學號</th>
-                    <th>姓名</th>
-                    <th>原班級 (座號)</th>
-                    <th>校隊</th>
-                    <th>社團</th>
-                    <th>假日班</th>
-                    <th>資優班</th>
-                    <th>數學分組</th>
-                    <th>自然分組</th>
-                    <th>英語分組</th>
-                    <th>晚自習</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
+            <thead id="studentTableHead"></thead>
             <tbody id="studentTableBody">
-                <tr><td colspan="13">⏳ 載入全校學生資料中...</td></tr>
+                <tr><td colspan="6">⏳ 載入全校學生資料中...</td></tr>
             </tbody>
         </table>
     </div>
@@ -73,12 +53,12 @@
 <!-- 🌟 多選分類設定 Modal -->
 <div id="multiSelectModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 420px;">
-        <h3 id="multiModalTitle" style="margin-top:0; color:#2c3e50;">設定分組</h3>
-        <p style="font-size: 13px; color: #7f8c8d; margin-top:0;">可複選多個班級／社團，儲存後將即時同步至班級管理與點名系統：</p>
+        <h3 id="multiModalTitle">設定分組</h3>
+        <p class="modal-desc">可複選多個班級／社團，儲存後將即時同步至班級管理與點名系統：</p>
         <div id="multiCheckboxContainer" class="checkbox-list"></div>
-        <div style="display:flex; gap:10px; margin-top:15px;">
-            <button onclick="saveMultiSelect()" class="btn-add" style="flex:1;">儲存變更</button>
-            <button onclick="closeMultiModal()" class="btn-back" style="flex:1; margin-bottom:0; background:#95a5a6; color:white; border:none; border-radius:5px;">取消</button>
+        <div class="modal-actions">
+            <button onclick="saveMultiSelect()" class="btn-add">💾 儲存變更</button>
+            <button onclick="closeMultiModal()" class="btn-back">取消</button>
         </div>
     </div>
 </div>
@@ -86,15 +66,15 @@
 <!-- 🌟 批量匯入 Modal -->
 <div id="bulkImportModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
-        <h3 style="margin-top:0;">📊 從 Excel 批量匯入全校學生</h3>
-        <p style="font-size: 14px; color: #555; line-height: 1.6;">
+        <h3>📊 從 Excel 批量匯入全校學生</h3>
+        <p class="modal-desc">
             請從 Excel 複製並貼上，欄位順序必須為：<br>
-            <b style="color:#c0392b;">第一欄：原班級 ｜ 第二欄：姓名 ｜ 第三欄：座號 ｜ 第四欄：學號</b>
+            <span class="modal-highlight">第一欄：原班級 ｜ 第二欄：姓名 ｜ 第三欄：座號 ｜ 第四欄：學號</span>
         </p>
-        <textarea id="bulkTextarea" rows="10" placeholder="例：&#10;801&#9;王小明&#9;01&#9;1130001&#10;801&#9;陳小華&#9;02&#9;1130002" style="width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-family: monospace;"></textarea>
-        <div style="display:flex; gap:10px; margin-top:15px;">
-            <button onclick="processBulkImport()" class="btn-add" style="flex:1;">解析並匯入</button>
-            <button onclick="closeBulkModal()" class="btn-back" style="flex:1; margin-bottom:0; background:#95a5a6; color:white; border:none; border-radius:5px;">取消</button>
+        <textarea id="bulkTextarea" rows="10" placeholder="例：&#10;801&#9;王小明&#9;01&#9;1130001&#10;801&#9;陳小華&#9;02&#9;1130002" style="width: 100%; font-family: monospace;"></textarea>
+        <div class="modal-actions">
+            <button onclick="processBulkImport()" class="btn-add">解析並匯入</button>
+            <button onclick="closeBulkModal()" class="btn-back">取消</button>
         </div>
     </div>
 </div>

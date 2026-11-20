@@ -1,20 +1,31 @@
-const MULTI_CATEGORIES = ['校隊', '社團', '週六假日班', '週六資優班', '周間分組班(數)', '周間分組班(自)', '周間分組班(英)', '周間晚自習'];
+const DEFAULT_CATEGORIES = [
+    '周間普通班', '周間分組班(數)', '周間分組班(英)', '周間分組班(自)',
+    '周間晚自習', '週六假日班', '週六資優班', '校隊', '社團'
+];
 
+let MULTI_CATEGORIES = [];
 let masterStudents = {};
 let rosterTemplate = {};
 let displayList = [];
 let editingContext = { studentNumber: null, category: null };
 
 async function loadAllData() {
-    const [stuSnap, tplSnap] = await Promise.all([
+    const [stuSnap, tplSnap, catSnap] = await Promise.all([
         window.db.ref('students').once('value'),
-        window.db.ref('rosterTemplate').once('value')
+        window.db.ref('rosterTemplate').once('value'),
+        window.db.ref('categories').once('value')
     ]);
 
     rosterTemplate = tplSnap.val() || { "周間普通班": {} };
     masterStudents = stuSnap.val();
 
-    // 自動相容：若 students 總檔為空，自動從周間普通班遷移建立
+    // 動態讀取班種（排除周間普通班）
+    const rawCats = catSnap.val();
+    const allCats = rawCats
+        ? (Array.isArray(rawCats) ? rawCats.filter(Boolean) : Object.values(rawCats))
+        : [...DEFAULT_CATEGORIES];
+    MULTI_CATEGORIES = allCats.filter(c => c !== '周間普通班');
+
     if (!masterStudents) {
         masterStudents = {};
         if (rosterTemplate['周間普通班']) {
@@ -36,9 +47,26 @@ async function loadAllData() {
         }
     }
 
+    renderTableHeader();
     populateHomeroomSelect();
     buildDisplayList();
     filterTable();
+}
+
+function renderTableHeader() {
+    const thead = document.getElementById('studentTableHead');
+    if (!thead) return;
+    const catHeaders = MULTI_CATEGORIES.map(cat => `<th>${cat}</th>`).join('');
+    thead.innerHTML = `
+        <tr style="white-space: nowrap;">
+            <th width="4%"><input type="checkbox" onchange="toggleSelectAll(this)"></th>
+            <th>學號</th>
+            <th>姓名</th>
+            <th>原班級 (座號)</th>
+            ${catHeaders}
+            <th>操作</th>
+        </tr>
+    `;
 }
 
 function populateHomeroomSelect() {
@@ -48,7 +76,6 @@ function populateHomeroomSelect() {
 }
 
 function buildDisplayList() {
-    // 建立各分類反查表
     const lookup = {};
     MULTI_CATEGORIES.forEach(cat => {
         lookup[cat] = {};
@@ -66,23 +93,13 @@ function buildDisplayList() {
 
     displayList = Object.values(masterStudents).map(s => {
         const fallbackId = s.homeroom ? `${s.homeroom}-${s.seatNo}` : s.studentNumber;
-        const getList = (cat) => lookup[cat][s.studentNumber] || lookup[cat][fallbackId] || [];
-        return {
-            ...s,
-            memberships: {
-                '校隊': getList('校隊'),
-                '社團': getList('社團'),
-                '週六假日班': getList('週六假日班'),
-                '週六資優班': getList('週六資優班'),
-                '周間分組班(數)': getList('周間分組班(數)'),
-                '周間分組班(自)': getList('周間分組班(自)'),
-                '周間分組班(英)': getList('周間分組班(英)'),
-                '周間晚自習': getList('周間晚自習')
-            }
-        };
+        const memberships = {};
+        MULTI_CATEGORIES.forEach(cat => {
+            memberships[cat] = lookup[cat][s.studentNumber] || lookup[cat][fallbackId] || [];
+        });
+        return { ...s, memberships };
     });
 
-    // 依原班級、座號、學號自然排序
     displayList.sort((a, b) => {
         const cCmp = (a.homeroom || 'zzz').localeCompare(b.homeroom || 'zzz', undefined, { numeric: true });
         if (cCmp !== 0) return cCmp;
@@ -106,17 +123,18 @@ function filterTable() {
 
 function renderTable(list) {
     const tbody = document.getElementById('studentTableBody');
+    const colCount = MULTI_CATEGORIES.length + 5;
     document.getElementById('totalCount').innerText = `共 ${list.length} 人`;
 
     if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" style="color:#7f8c8d;">尚無符合條件的學生資料</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${colCount}" style="color:#7f8c8d;">尚無符合條件的學生資料</td></tr>`;
         return;
     }
 
     const renderCell = (stuNum, cat, arr) => {
         const content = arr.length > 0
             ? arr.map(item => `<span class="tag-pill">${item}</span>`).join('')
-            : `<span class="tag-empty">${cat === '校隊' ? '無校隊' : '無'}</span>`;
+            : `<span class="tag-empty">無</span>`;
         return `<td class="clickable-cell" onclick="openMultiModal('${stuNum}', '${cat}')" title="點擊設定${cat}">${content}</td>`;
     };
 
@@ -126,14 +144,7 @@ function renderTable(list) {
             <td style="color:#2980b9; font-family: monospace; font-weight:bold;">${s.studentNumber}</td>
             <td style="font-weight:bold;">${s.name}</td>
             <td>${s.homeroom ? `${s.homeroom} (${s.seatNo}號)` : '<span class="tag-empty">未分班</span>'}</td>
-            ${renderCell(s.studentNumber, '校隊', s.memberships['校隊'])}
-            ${renderCell(s.studentNumber, '社團', s.memberships['社團'])}
-            ${renderCell(s.studentNumber, '週六假日班', s.memberships['週六假日班'])}
-            ${renderCell(s.studentNumber, '週六資優班', s.memberships['週六資優班'])}
-            ${renderCell(s.studentNumber, '周間分組班(數)', s.memberships['周間分組班(數)'])}
-            ${renderCell(s.studentNumber, '周間分組班(自)', s.memberships['周間分組班(自)'])}
-            ${renderCell(s.studentNumber, '周間分組班(英)', s.memberships['周間分組班(英)'])}
-            ${renderCell(s.studentNumber, '周間晚自習', s.memberships['周間晚自習'])}
+            ${MULTI_CATEGORIES.map(cat => renderCell(s.studentNumber, cat, s.memberships[cat] || [])).join('')}
             <td class="action-btns">
                 <button class="btn-edit" onclick="editMasterStudent('${s.studentNumber}')" title="修改基本資料">✏️</button>
                 <button class="btn-delete" onclick="deleteMasterStudent('${s.studentNumber}')" title="永久刪除學生">🗑️</button>

@@ -4,43 +4,197 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>校園點名系統 - 教師端</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="teacher.css">
 </head>
 <body>
 
-<div class="container">
-    <h2>📱 教師點名端</h2>
-    
-    <div id="step1">
-        <h3 style="text-align: center; color: #555;">請選擇課程類別</h3>
-        <div class="category-grid">
-            <button class="btn-category" onclick="selectCategory('周間普通班')">周間普通班</button>
-            <button class="btn-category" onclick="selectCategory('周間分組班(數)')">周間分組班(數)</button>
-            <button class="btn-category" onclick="selectCategory('周間分組班(英)')">周間分組班(英)</button>
-            <button class="btn-category" onclick="selectCategory('周間分組班(自)')">周間分組班(自)</button>
-            <button class="btn-category" onclick="selectCategory('周間晚自習')">周間晚自習</button>
-            <button class="btn-category" onclick="selectCategory('週六假日班')">週六假日班</button>
-            <button class="btn-category" onclick="selectCategory('週六資優班')">週六資優班</button>
-            <button class="btn-category" onclick="selectCategory('校隊')">校隊</button>
-            <button class="btn-category" onclick="selectCategory('社團')">社團</button>
-        </div>
-    </div>
+<div class="page-backdrop" aria-hidden="true"></div>
 
-    <div id="step2" style="display: none;">
-        <div class="top-bar">
-            <button onclick="goBack()" class="btn-back">⬅ 返回</button>
-            <input type="date" id="dateSelect" class="date-picker" onchange="renderStudents()">
+<main class="teacher-wrapper">
+    <!-- ==================== STEP 1：無軌道立體星環班種選單 ==================== -->
+    <section id="step1" class="orbit-section">
+        <div class="orbit-stage" id="orbitStage">
+            <!-- 正中央：教師點名核心菱形 -->
+            <button type="button" class="center-diamond" id="centerDiamond" onclick="enterActiveCategory()" title="點擊進入目前選取的班種">
+                <div class="center-inner">
+                    <span class="center-icon">👩‍🏫</span>
+                    <span class="center-label">教師點名</span>
+                    <span class="center-current" id="centerCurrentLabel">載入中...</span>
+                </div>
+            </button>
+
+            <!-- 衛星班種菱形（動態讀取 Firebase categories 生成） -->
+            <div id="orbitSatellites"></div>
         </div>
-        
-        <h3 id="selectedCategoryTitle" style="color: var(--primary);"></h3>
-        <select id="classSelect" onchange="renderStudents()"></select>
-        
-        <div id="studentList"></div>
-        <button class="btn-submit" onclick="submitAttendance()">送出點名資料</button>
+
+        <!-- 底部鎖定資訊與快捷控制列 -->
+        <div class="orbit-footer">
+            <div class="active-control-row">
+                <button type="button" class="step-arrow" onclick="stepOrbit(-1)" aria-label="上一個班種">◀</button>
+                <button type="button" class="btn-enter-category" onclick="enterActiveCategory()">
+                    <span class="enter-prefix">進入</span>
+                    <strong id="activeCategoryName">載入中...</strong>
+                    <span class="enter-arrow">➔</span>
+                </button>
+                <button type="button" class="step-arrow" onclick="stepOrbit(1)" aria-label="下一個班種">▶</button>
+            </div>
+            <p class="orbit-hint">左右滑動／滾輪轉動立體星環，或直接點擊目標班種鎖定後進入</p>
+        </div>
+    </section>
+
+    <!-- ==================== STEP 2：6×6 座位表與四向滑動點名 ==================== -->
+    <section id="step2" class="attendance-section" style="display: none;">
+        <div class="attendance-card">
+            <div class="top-bar">
+                <button type="button" onclick="goBack()" class="btn-back">⬅ 重選班種</button>
+
+                <div class="mode-switch" role="group" aria-label="切換操作模式">
+                    <button type="button" id="btnModeSwipe" class="mode-btn active" onclick="setInteractionMode('swipe')">✋ 滑動點名</button>
+                    <button type="button" id="btnModeSeat" class="mode-btn" onclick="setInteractionMode('seat')">🪑 調整座位</button>
+                </div>
+
+                <input type="date" id="dateSelect" class="date-picker" onchange="handleDateOrClassChange('date')">
+            </div>
+
+            <div class="class-header">
+                <span class="category-badge" id="selectedCategoryTitle"></span>
+                <select id="classSelect" class="class-select" onchange="handleDateOrClassChange('class')"></select>
+                <span id="unsavedIndicator" class="unsaved-pill" style="display:none;">● 尚有未送出變更</span>
+                <span class="last-update-badge" id="lastUpdate">等待選擇班級...</span>
+            </div>
+
+            <div class="status-legend">
+                <div class="legend-items">
+                    <span class="legend-item"><i class="legend-dot dot-green"></i>⬅ 出席</span>
+                    <span class="legend-item"><i class="legend-dot dot-red"></i>➡ 無故未到</span>
+                    <span class="legend-item"><i class="legend-dot dot-yellow"></i>⬆ 請假</span>
+                    <span class="legend-item"><i class="legend-dot dot-purple"></i>⬇ 部分出席</span>
+                    <span class="legend-item"><i class="legend-dot dot-none"></i>未點名</span>
+                </div>
+                <span class="legend-tip" id="modeHintText">💡 按住座位卡向四方向滑動點名，輕點可編輯備註；完成後請按「送出點名」</span>
+            </div>
+
+            <!-- 黑板／講台 ＋ 左側「全到」與右側「送出點名」 -->
+            <div class="board-bar">
+                <button type="button" id="btnAllPresent" class="btn-board-all" onclick="markAllPresent()">✅ 全到</button>
+                <h3 class="board-title">黑板 / 講台</h3>
+                <button type="button" id="btnSubmitAttendance" class="btn-board-submit" onclick="submitAttendance()">💾 送出點名</button>
+            </div>
+
+            <div class="chart-container">
+                <div class="seating-chart" id="seatingChart"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- ==================== 上滑：底部假別挑選卡片 ==================== -->
+<div id="leaveSheet" class="sheet-overlay" onclick="closeLeaveSheet(event)">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3 id="leaveSheetTitle">登記請假</h3>
+            <button type="button" class="sheet-close" onclick="closeLeaveSheet()">✕</button>
+        </div>
+        <p class="sheet-sub">請點選假別卡片（點選病／喪／事假將直接暫存，按講台右側「送出點名」後同步）：</p>
+
+        <div class="leave-card-grid">
+            <button type="button" class="leave-type-card" data-leave="病假" onclick="selectLeaveType('病假')">
+                <span class="leave-icon">🤒</span>
+                <span class="leave-name">病假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="事假" onclick="selectLeaveType('事假')">
+                <span class="leave-icon">📝</span>
+                <span class="leave-name">事假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="喪假" onclick="selectLeaveType('喪假')">
+                <span class="leave-icon">🕊️</span>
+                <span class="leave-name">喪假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="因故缺席" onclick="selectLeaveType('因故缺席')">
+                <span class="leave-icon">📌</span>
+                <span class="leave-name">因故缺席</span>
+            </button>
+        </div>
+
+        <div class="sheet-extra-box">
+            <div id="leaveReasonWrap" style="display:none; margin-bottom:10px;">
+                <label class="modal-label" style="margin-top:0;">因故缺席原因：</label>
+                <input type="text" id="leaveReasonInput" class="modal-input" placeholder="請輸入缺席原因（例：公假比賽、輔導室晤談）">
+            </div>
+            <input type="text" id="leaveNoteInput" class="modal-input" placeholder="備註事項（選填，可先填寫再點上方假別）" style="margin-bottom:0;">
+            <div id="leaveConfirmWrap" class="modal-actions" style="display:none;">
+                <button type="button" class="btn-add" onclick="confirmReasonLeave()">✅ 確認登記因故缺席</button>
+                <button type="button" class="btn-back" onclick="closeLeaveSheet()">取消</button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- 🌟 確保這三行存在，才能連上雲端 -->
+<!-- ==================== 下滑：部分出席來課時間卡片 ==================== -->
+<div id="partialSheet" class="sheet-overlay" onclick="closePartialSheet(event)">
+    <div class="bottom-sheet sheet-purple" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3 id="partialSheetTitle">登記部分出席</h3>
+            <button type="button" class="sheet-close" onclick="closePartialSheet()">✕</button>
+        </div>
+        <p class="sheet-sub">請填寫學生來課／離校時間：</p>
+
+        <div class="time-group" style="margin-bottom: 12px;">
+            <label>來課時間 <input type="time" id="partialTimeIn"></label>
+            <label>離校時間 <input type="time" id="partialTimeOut"></label>
+        </div>
+
+        <label class="modal-label">備註事項（選填）：</label>
+        <input type="text" id="partialNoteInput" class="modal-input" placeholder="例如：第二節才進教室、提前離校">
+
+        <div class="modal-actions">
+            <button type="button" class="btn-add" onclick="confirmPartialAttendance()">✅ 確認登記部分出席</button>
+            <button type="button" class="btn-back" onclick="closePartialSheet()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 輕點卡片：完整狀態修改彈跳視窗 ==================== -->
+<div id="statusModal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+    <div class="modal-content">
+        <h3 id="modalStuName" class="modal-title">修改狀態</h3>
+        <label class="modal-label">點名狀態：</label>
+        <select id="modalStatusSelect" class="modal-input">
+            <option value="出席">出席</option>
+            <option value="無故缺席">無故缺席</option>
+            <option value="部分出席">部分出席</option>
+            <option value="病假">病假</option>
+            <option value="喪假">喪假</option>
+            <option value="事假">事假</option>
+            <option value="因故缺席">因故缺席</option>
+            <option value="未點名">未點名</option>
+        </select>
+
+        <div id="modalTimeGroup" class="time-group" style="display:none; margin-bottom:10px;">
+            <label>來課 <input type="time" id="modalTimeIn"></label>
+            <label>離校 <input type="time" id="modalTimeOut"></label>
+        </div>
+
+        <input type="text" id="modalReason" class="modal-input" placeholder="請輸入缺席原因" style="display:none;">
+
+        <label class="modal-label">備註事項：</label>
+        <input type="text" id="modalNote" class="modal-input" placeholder="輸入備註 (選填)">
+
+        <div class="modal-actions">
+            <button type="button" onclick="saveTeacherStatus()" class="btn-add">✅ 套用暫存</button>
+            <button type="button" onclick="closeModal()" class="btn-back">❌ 取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 輕量懸浮提示列 -->
+<div id="toastBox" class="toast-box" aria-live="polite"></div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>

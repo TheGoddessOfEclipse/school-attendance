@@ -22,23 +22,20 @@
         <a href="manage_students.html" class="btn-back" style="margin-left:auto; background:#16a085;">前往學生總檔 ➔</a>
     </div>
 
-    <div class="control-panel">
-        <select id="categorySelect" onchange="updateClassSelect()">
-            <option value="周間普通班">周間普通班</option>
-            <option value="周間分組班(數)">周間分組班(數)</option>
-            <option value="周間分組班(英)">周間分組班(英)</option>
-            <option value="周間分組班(自)">周間分組班(自)</option>
-            <option value="周間晚自習">周間晚自習</option>
-            <option value="週六假日班">週六假日班</option>
-            <option value="週六資優班">週六資優班</option>
-            <option value="校隊">校隊</option>
-            <option value="社團">社團</option>
-        </select>
-        
-        <div class="class-controls">
+    <div class="control-panel" style="flex-direction: column; align-items: stretch;">
+        <!-- 🌟 班種管理列 -->
+        <div class="class-controls" style="flex: 1; flex-wrap: wrap;">
+            <span style="font-weight:bold; color:#2c3e50; white-space:nowrap;">班種：</span>
+            <select id="categorySelect" onchange="updateClassSelect()"></select>
+            <button onclick="addCategory()" class="btn-icon" style="background:#8e44ad; width:auto; padding-left:10px; padding-right:10px; white-space:nowrap;" title="新增班種">➕ 新增班種</button>
+            <button onclick="deleteCategory()" class="btn-icon btn-delete-class" id="btnDeleteCategory" style="width:auto; padding-left:10px; padding-right:10px; white-space:nowrap;" title="刪除目前班種">🗑️ 刪除班種</button>
+        </div>
+
+        <!-- 班級管理列 -->
+        <div class="class-controls" style="flex: 1; flex-wrap: wrap;">
+            <span style="font-weight:bold; color:#2c3e50; white-space:nowrap;">班級：</span>
             <select id="classSelect" onchange="renderClassStudents()"></select>
             <button onclick="addClass()" class="btn-icon" title="新增單一班級">➕</button>
-            <!-- 🌟 新增：批量建立班級按鈕 -->
             <button onclick="openBulkClassModal()" class="btn-icon" style="background:#27ae60; color:white; width:auto; padding-left:10px; padding-right:10px; font-size:14px; white-space:nowrap;" title="批量建立多個班級">📑 批量建班</button>
             <button onclick="editClass()" class="btn-icon btn-edit-class" id="btnEditClass" title="修改班級名稱">✏️</button>
             <button onclick="deleteClass()" class="btn-icon btn-delete-class" id="btnDeleteClass" title="刪除班級">🗑️</button>

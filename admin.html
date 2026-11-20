@@ -4,54 +4,143 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>校園點名系統 - 行政監控端</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
 <div class="container">
-    <h2>
-        🛡️ 行政巡堂與座位監控
-        <span style="font-size: 14px; color: #7f8c8d;" id="lastUpdate">等待更新...</span>
-    </h2>
+    <div class="header">
+        <a href="admin_index.html" class="btn-back" onclick="return confirmLeaveIfDirty()">⬅ 返回首頁</a>
+        <h2>🛡️ 行政巡堂與座位監控</h2>
+        <span class="last-update-badge" id="lastUpdate">等待更新...</span>
+    </div>
 
+    <!-- STEP 1：選擇監控類別 -->
     <div id="step1">
-        <h3 style="text-align: center; color: #555; margin-top: 20px;">請選擇監控類別</h3>
-        <div class="category-grid">
-            <button class="btn-category" onclick="selectAdminCategory('周間普通班')">周間普通班</button>
-            <button class="btn-category" onclick="selectAdminCategory('周間分組班(數)')">周間分組班(數)</button>
-            <button class="btn-category" onclick="selectAdminCategory('周間分組班(英)')">周間分組班(英)</button>
-            <button class="btn-category" onclick="selectAdminCategory('周間分組班(自)')">周間分組班(自)</button>
-            <button class="btn-category" onclick="selectAdminCategory('周間晚自習')">周間晚自習</button>
-            <button class="btn-category" onclick="selectAdminCategory('週六假日班')">週六假日班</button>
-            <button class="btn-category" onclick="selectAdminCategory('週六資優班')">週六資優班</button>
-            <button class="btn-category" onclick="selectAdminCategory('校隊')">校隊</button>
-            <button class="btn-category" onclick="selectAdminCategory('社團')">社團</button>
+        <h3 class="step-subtitle">請選擇監控類別</h3>
+        <div class="category-grid" id="adminCategoryGrid">
+            <div class="loading-hint">⏳ 載入班種中...</div>
         </div>
     </div>
 
+    <!-- STEP 2：班級座位表巡堂與滑動點名 -->
     <div id="step2" style="display: none;">
         <div class="top-bar">
-            <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
-            <button onclick="goBack()" class="btn-back" style="background:#34495e;">重新選類別</button>
-            <input type="date" id="adminDateSelect" class="date-picker" onchange="loadSeatingChart()">
+            <button type="button" onclick="goBack()" class="btn-back btn-reselect">🔄 重新選擇班種</button>
+
+            <div class="mode-switch" role="group" aria-label="切換操作模式">
+                <button type="button" id="btnModeSwipe" class="mode-btn active" onclick="setInteractionMode('swipe')">✋ 滑動點名</button>
+                <button type="button" id="btnModeSeat" class="mode-btn" onclick="setInteractionMode('seat')">🪑 調整座位</button>
+            </div>
+
+            <input type="date" id="adminDateSelect" class="date-picker" onchange="handleDateOrClassChange('date')">
         </div>
 
         <div class="admin-panel">
-            <strong id="adminCategoryTitle" style="color: var(--primary); margin-right: 10px;"></strong>
-            <select id="adminClassSelect" onchange="loadSeatingChart()"></select>
+            <span id="adminCategoryTitle" class="category-pill"></span>
+            <select id="adminClassSelect" onchange="handleDateOrClassChange('class')"></select>
+            <span id="unsavedIndicator" class="unsaved-pill" style="display:none;">● 尚有未送出變更</span>
         </div>
 
-        <h3 class="board-title">黑板 / 講台</h3>
+        <div class="status-legend">
+            <div class="legend-items">
+                <span class="legend-item"><i class="legend-dot dot-green"></i>⬅ 出席</span>
+                <span class="legend-item"><i class="legend-dot dot-red"></i>➡ 無故未到</span>
+                <span class="legend-item"><i class="legend-dot dot-yellow"></i>⬆ 請假</span>
+                <span class="legend-item"><i class="legend-dot dot-purple"></i>⬇ 部分出席</span>
+                <span class="legend-item"><i class="legend-dot dot-none"></i>未點名</span>
+            </div>
+            <span class="legend-tip" id="modeHintText">💡 按住座位卡向四方向滑動點名，輕點可編輯備註；完成後請按「送出點名」</span>
+        </div>
+
+        <!-- 黑板／講台 ＋ 左側「全到」與右側「送出點名」 -->
+        <div class="board-bar">
+            <button type="button" id="btnAllPresent" class="btn-board-all" onclick="markAllPresent()">✅ 全到</button>
+            <h3 class="board-title">黑板 / 講台</h3>
+            <button type="button" id="btnSubmitAttendance" class="btn-board-submit" onclick="submitAdminAttendance()">💾 送出點名</button>
+        </div>
+
         <div class="chart-container">
             <div class="seating-chart" id="seatingChart"></div>
         </div>
     </div>
 </div>
 
-<!-- 彈跳視窗 (Modal) -->
-<div id="statusModal" class="modal-overlay">
+<!-- ==================== 上滑：底部假別挑選卡片 ==================== -->
+<div id="leaveSheet" class="sheet-overlay" onclick="closeLeaveSheet(event)">
+    <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3 id="leaveSheetTitle">登記請假</h3>
+            <button type="button" class="sheet-close" onclick="closeLeaveSheet()">✕</button>
+        </div>
+        <p class="sheet-sub">請點選假別卡片（點選病／喪／事假將直接暫存，按講台右側「送出點名」後同步）：</p>
+
+        <div class="leave-card-grid">
+            <button type="button" class="leave-type-card" data-leave="病假" onclick="selectLeaveType('病假')">
+                <span class="leave-icon">🤒</span>
+                <span class="leave-name">病假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="事假" onclick="selectLeaveType('事假')">
+                <span class="leave-icon">📝</span>
+                <span class="leave-name">事假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="喪假" onclick="selectLeaveType('喪假')">
+                <span class="leave-icon">🕊️</span>
+                <span class="leave-name">喪假</span>
+            </button>
+            <button type="button" class="leave-type-card" data-leave="因故缺席" onclick="selectLeaveType('因故缺席')">
+                <span class="leave-icon">📌</span>
+                <span class="leave-name">因故缺席</span>
+            </button>
+        </div>
+
+        <div class="sheet-extra-box">
+            <div id="leaveReasonWrap" style="display:none; margin-bottom:10px;">
+                <label class="modal-label" style="margin-top:0;">因故缺席原因：</label>
+                <input type="text" id="leaveReasonInput" class="modal-input" placeholder="請輸入缺席原因（例：公假比賽、輔導室晤談）">
+            </div>
+            <input type="text" id="leaveNoteInput" class="modal-input" placeholder="備註事項（選填，可先填寫再點上方假別）" style="margin-bottom:0;">
+            <div id="leaveConfirmWrap" class="modal-actions" style="display:none;">
+                <button type="button" class="btn-add" onclick="confirmReasonLeave()">✅ 確認登記因故缺席</button>
+                <button type="button" class="btn-back" onclick="closeLeaveSheet()">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 下滑：部分出席來課時間卡片 ==================== -->
+<div id="partialSheet" class="sheet-overlay" onclick="closePartialSheet(event)">
+    <div class="bottom-sheet sheet-purple" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h3 id="partialSheetTitle">登記部分出席</h3>
+            <button type="button" class="sheet-close" onclick="closePartialSheet()">✕</button>
+        </div>
+        <p class="sheet-sub">請填寫學生來課／離校時間：</p>
+
+        <div class="time-group" style="margin-bottom: 12px;">
+            <label>來課時間 <input type="time" id="partialTimeIn"></label>
+            <label>離校時間 <input type="time" id="partialTimeOut"></label>
+        </div>
+
+        <label class="modal-label">備註事項（選填）：</label>
+        <input type="text" id="partialNoteInput" class="modal-input" placeholder="例如：第二節才進教室、提前離校">
+
+        <div class="modal-actions">
+            <button type="button" class="btn-add" onclick="confirmPartialAttendance()">✅ 確認登記部分出席</button>
+            <button type="button" class="btn-back" onclick="closePartialSheet()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 輕點卡片：完整狀態修改彈跳視窗 ==================== -->
+<div id="statusModal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
     <div class="modal-content">
-        <h3 id="modalStuName" style="margin-top:0; color:#2c3e50;">修改狀態</h3>
+        <h3 id="modalStuName" class="modal-title">修改狀態</h3>
         <label class="modal-label">點名狀態：</label>
         <select id="modalStatusSelect" class="modal-input">
             <option value="出席">出席</option>
@@ -63,19 +152,26 @@
             <option value="因故缺席">因故缺席</option>
             <option value="未點名">未點名</option>
         </select>
+
         <div id="modalTimeGroup" class="time-group" style="display:none; margin-bottom:10px;">
-            <label>入校 <input type="time" id="modalTimeIn"></label>
+            <label>來課 <input type="time" id="modalTimeIn"></label>
             <label>離校 <input type="time" id="modalTimeOut"></label>
         </div>
+
         <input type="text" id="modalReason" class="modal-input" placeholder="請輸入缺席原因" style="display:none;">
+
         <label class="modal-label">備註事項：</label>
         <input type="text" id="modalNote" class="modal-input" placeholder="輸入備註 (選填)">
-        <div style="display:flex; gap:10px; margin-top:15px;">
-            <button onclick="saveAdminStatus()" class="btn-add" style="flex:1; padding:10px;">💾 儲存</button>
-            <button onclick="closeModal()" class="btn-back" style="flex:1; margin-bottom:0; padding:10px;">❌ 取消</button>
+
+        <div class="modal-actions">
+            <button type="button" onclick="saveAdminStatus()" class="btn-add">✅ 套用暫存</button>
+            <button type="button" onclick="closeModal()" class="btn-back">❌ 取消</button>
         </div>
     </div>
 </div>
+
+<!-- 輕量懸浮提示列 -->
+<div id="toastBox" class="toast-box" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>

@@ -20,23 +20,23 @@ window.addEventListener('DOMContentLoaded', async () => {
                         let students = dailyData[cat][cls].filter(s => s.id !== '_placeholder');
                         if (students.length === 0) continue;
 
-                        // 🌟 判定標準：只要有一人狀態不是「未點名」，就視為有這筆紀錄
+                        // 判定標準：只要有一人狀態不是「未點名」，就視為有這筆紀錄
                         let hasRecord = students.some(s => s.status !== "未點名");
                         if (hasRecord) {
                             let total = students.length;
                             let presentCount = students.filter(s => s.status === '出席' || s.status === '部分出席').length;
                             let rate = total === 0 ? 0 : Math.round((presentCount / total) * 100);
-                            
+
                             // 整理未到清單
                             let absentStudents = students.filter(s => s.status !== '出席' && s.status !== '部分出席' && s.status !== '未點名');
-                            let absentText = absentStudents.length > 0 
-                                ? absentStudents.map(s => `${s.name}(${s.status})`).join(', ') 
-                                : '<span style="color:#2ecc71; font-weight:bold;">全勤 🎉</span>';
+                            let absentText = absentStudents.length > 0
+                                ? absentStudents.map(s => `${s.name}(${s.status})`).join(', ')
+                                : '<span style="color:#58d68d; font-weight:bold;">全勤 🎉</span>';
 
                             // 取得最後更新時間
-                            let lastUpdated = metaData && metaData[cat] && metaData[cat][cls] 
-                                ? new Date(metaData[cat][cls]).toLocaleString() 
-                                : '<span style="color:#95a5a6;">無時間紀錄</span>';
+                            let lastUpdated = metaData && metaData[cat] && metaData[cat][cls]
+                                ? new Date(metaData[cat][cls]).toLocaleString()
+                                : '<span style="color:#7f8c8d;">無時間紀錄</span>';
 
                             records.push({ date, category: cat, className: cls, lastUpdated, rate, absentText });
                         }
@@ -50,14 +50,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         tbody.innerHTML = '';
         if (records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="color:#7f8c8d;">目前尚無任何點名紀錄。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="color:#aeb9b6; padding:24px;">目前尚無任何點名紀錄。</td></tr>';
             return;
         }
 
         records.forEach(r => {
             let barColor = r.rate >= 90 ? 'bar-green' : (r.rate >= 70 ? 'bar-yellow' : 'bar-red');
             let link = `admin.html?date=${r.date}&category=${encodeURIComponent(r.category)}&class=${encodeURIComponent(r.className)}`;
-            
+
             tbody.innerHTML += `
                 <tr>
                     <td><b>${r.date}</b></td>
@@ -66,7 +66,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                     <td>${r.lastUpdated}</td>
                     <td>
                         <div class="progress-bg">
-                            <div class="progress-bar ${barColor}" style="width: ${r.rate}%;">${r.rate}%</div>
+                            <div class="progress-bar ${barColor}" style="width: ${r.rate}%;"></div>
+                            <span class="progress-text">${r.rate}%</span>
                         </div>
                     </td>
                     <td><div class="absent-list">${r.absentText}</div></td>
@@ -77,6 +78,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("讀取失敗:", error);
-        tbody.innerHTML = '<tr><td colspan="7" style="color:red;">資料載入失敗，請檢查連線。</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="color:#ff8a80; padding:24px;">資料載入失敗，請檢查連線。</td></tr>';
     }
 });

@@ -1,3 +1,9 @@
+const DEFAULT_CATEGORIES = [
+    '周間普通班', '周間分組班(數)', '周間分組班(英)', '周間分組班(自)',
+    '周間晚自習', '週六假日班', '週六資優班', '校隊', '社團'
+];
+
+let categoriesList = [];
 let masterStudents = {}; // 全校學生總檔 { studentNumber: { studentNumber, name, homeroom, seatNo } }
 
 async function getTemplate() {
@@ -9,7 +15,6 @@ async function getMasterStudents() {
     let snap = await window.db.ref('students').once('value');
     let data = snap.val();
 
-    // 自動相容：若 students 總檔為空，自動從現有周間普通班同步一份建立總檔
     if (!data) {
         const template = await getTemplate();
         data = {};
@@ -35,14 +40,111 @@ async function getMasterStudents() {
     return masterStudents;
 }
 
+// 🌟 載入班種清單（若尚未建立則自動由預設 9 種初始化）
+async function loadCategories(selectedCat = null) {
+    const [catSnap, tplSnap] = await Promise.all([
+        window.db.ref('categories').once('value'),
+        window.db.ref('rosterTemplate').once('value')
+    ]);
+
+    const rawCats = catSnap.val();
+    const template = tplSnap.val() || {};
+
+    if (!rawCats) {
+        const merged = [...DEFAULT_CATEGORIES];
+        Object.keys(template).forEach(k => {
+            if (!merged.includes(k)) merged.push(k);
+        });
+        categoriesList = merged;
+        await window.db.ref('categories').set(categoriesList);
+    } else {
+        categoriesList = Array.isArray(rawCats) ? rawCats.filter(Boolean) : Object.values(rawCats);
+        if (!categoriesList.includes('周間普通班')) {
+            categoriesList.unshift('周間普通班');
+            await window.db.ref('categories').set(categoriesList);
+        }
+    }
+
+    const catSelect = document.getElementById('categorySelect');
+    const prev = selectedCat || catSelect.value;
+    catSelect.innerHTML = categoriesList
+        .map(c => `<option value="${c}">${c}</option>`)
+        .join('');
+
+    if (prev && categoriesList.includes(prev)) {
+        catSelect.value = prev;
+    }
+}
+
+// 🌟 新增班種
+async function addCategory() {
+    const newCat = prompt("請輸入要新增的班種名稱（例：寒輔班、補救教學）：");
+    if (!newCat || !newCat.trim()) return;
+    const trimmed = newCat.trim();
+
+    if (/[.#$\[\]\/'"\\]/.test(trimmed)) {
+        return alert("⚠️ 班種名稱不可包含 . # $ [ ] / 或引號等特殊符號！");
+    }
+    if (categoriesList.includes(trimmed)) {
+        return alert("此班種已經存在！");
+    }
+
+    categoriesList.push(trimmed);
+    await window.db.ref('categories').set(categoriesList);
+
+    if (typeof logActivity === 'function') {
+        await logActivity('班級管理', `新增班種「${trimmed}」`);
+    }
+
+    await loadCategories(trimmed);
+    await updateClassSelect();
+}
+
+// 🌟 刪除班種
+async function deleteCategory() {
+    const category = document.getElementById('categorySelect').value;
+    if (!category) return;
+
+    if (category === '周間普通班') {
+        return alert("🔒「周間普通班」為全校學生原班級核心分類，無法刪除！");
+    }
+
+    const data = await getTemplate();
+    const classCount = data[category] ? Object.keys(data[category]).length : 0;
+    const warnMsg = classCount > 0
+        ? `⚠️ 確定要刪除班種「${category}」嗎？\n底下目前有 ${classCount} 個班級，將會一併移除！\n（學生個人檔案仍會保留在全校總檔中）`
+        : `⚠️ 確定要刪除班種「${category}」嗎？`;
+
+    if (!confirm(warnMsg)) return;
+
+    categoriesList = categoriesList.filter(c => c !== category);
+    await window.db.ref('categories').set(categoriesList);
+    await window.db.ref(`rosterTemplate/${category}`).remove();
+
+    if (typeof logActivity === 'function') {
+        await logActivity('班級管理', `刪除班種「${category}」（含 ${classCount} 個班級）`);
+    }
+
+    await loadCategories('周間普通班');
+    await updateClassSelect();
+}
+
 async function initPage() {
     await getMasterStudents();
+    await loadCategories();
     await updateClassSelect();
 }
 
 async function updateClassSelect() {
     const category = document.getElementById('categorySelect').value;
     const classSelect = document.getElementById('classSelect');
+    const btnDelCat = document.getElementById('btnDeleteCategory');
+
+    // 核心班種隱藏刪除按鈕
+    if (btnDelCat) {
+        btnDelCat.style.display = (category === '周間普通班') ? 'none' : 'inline-block';
+    }
+
     const data = await getTemplate();
     
     classSelect.innerHTML = '';
