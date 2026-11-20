@@ -5,6 +5,110 @@ const DEFAULT_CATEGORIES = [
 
 let categoriesList = [];
 let masterStudents = {}; // 全校學生總檔 { studentNumber: { studentNumber, name, homeroom, seatNo } }
+let courseDurations = { categories: {}, classes: {} };
+
+async function loadCourseDurations() {
+    const snap = await window.db.ref('courseDurations').once('value');
+    const val = snap.val() || {};
+    courseDurations = {
+        categories: val.categories || {},
+        classes: val.classes || {}
+    };
+}
+
+function updateDurationInputs() {
+    const category = document.getElementById('categorySelect')?.value;
+    const className = document.getElementById('classSelect')?.value;
+    const catInput = document.getElementById('catDurationInput');
+    const clsInput = document.getElementById('clsDurationInput');
+    const resetBtn = document.getElementById('btnResetClsDuration');
+    if (!catInput || !clsInput) return;
+
+    const catDur = courseDurations.categories[category] || 45;
+    catInput.value = catDur;
+
+    if (!className) {
+        clsInput.value = '';
+        clsInput.placeholder = `預設(${catDur})`;
+        clsInput.disabled = true;
+        if (resetBtn) resetBtn.style.display = 'none';
+        return;
+    }
+
+    clsInput.disabled = false;
+    const customDur = courseDurations.classes?.[category]?.[className];
+    if (customDur) {
+        clsInput.value = customDur;
+        clsInput.placeholder = `預設(${catDur})`;
+        if (resetBtn) resetBtn.style.display = 'inline-block';
+    } else {
+        clsInput.value = '';
+        clsInput.placeholder = `預設(${catDur})`;
+        if (resetBtn) resetBtn.style.display = 'none';
+    }
+}
+
+async function saveCategoryDuration() {
+    const category = document.getElementById('categorySelect').value;
+    const mins = parseInt(document.getElementById('catDurationInput').value, 10);
+    if (!category) return;
+    if (isNaN(mins) || mins < 5 || mins > 600) {
+        return alert("請輸入 5 ～ 600 之間的分鐘數！");
+    }
+
+    await window.db.ref(`courseDurations/categories/${category}`).set(mins);
+    courseDurations.categories[category] = mins;
+    updateDurationInputs();
+
+    if (typeof logActivity === 'function') {
+        await logActivity('班級管理', `將班種「${category}」預設時長設為 ${mins} 分鐘`);
+    }
+    alert(`✅ 已將【${category}】預設時長設為 ${mins} 分鐘！\n（未單獨設定的班級將自動套用此數值）`);
+}
+
+async function saveClassDuration() {
+    const category = document.getElementById('categorySelect').value;
+    const className = document.getElementById('classSelect').value;
+    if (!category || !className) return alert("請先選擇班級！");
+
+    const mins = parseInt(document.getElementById('clsDurationInput').value, 10);
+    if (isNaN(mins) || mins < 5 || mins > 600) {
+        return alert("請輸入 5 ～ 600 之間的分鐘數！");
+    }
+
+    await window.db.ref(`courseDurations/classes/${category}/${className}`).set(mins);
+    if (!courseDurations.classes[category]) courseDurations.classes[category] = {};
+    courseDurations.classes[category][className] = mins;
+    updateDurationInputs();
+
+    if (typeof logActivity === 'function') {
+        await logActivity('班級管理', `將【${category} - ${className}】單班時長設為 ${mins} 分鐘`);
+    }
+    alert(`✅ 已單獨將【${className}】時長設為 ${mins} 分鐘（不影響同班種其他班級）。`);
+}
+
+async function resetClassDuration() {
+    const category = document.getElementById('categorySelect').value;
+    const className = document.getElementById('classSelect').value;
+    if (!category || !className) return;
+
+    await window.db.ref(`courseDurations/classes/${category}/${className}`).remove();
+    if (courseDurations.classes[category]) {
+        delete courseDurations.classes[category][className];
+    }
+    updateDurationInputs();
+
+    if (typeof logActivity === 'function') {
+        await logActivity('班級管理', `將【${category} - ${className}】恢復繼承班種預設時長`);
+    }
+    alert(`↩️【${className}】已恢復繼承班種預設時長。`);
+}
+
+function onClassSelectChanged() {
+    updateDurationInputs();
+    renderClassStudents();
+}
+
 
 async function getTemplate() {
     let snap = await window.db.ref('rosterTemplate').once('value');
@@ -131,6 +235,7 @@ async function deleteCategory() {
 
 async function initPage() {
     await getMasterStudents();
+    await loadCourseDurations();
     await loadCategories();
     await updateClassSelect();
 }
@@ -156,6 +261,7 @@ async function updateClassSelect() {
     } else {
         classSelect.innerHTML = '<option value="">(無班級，請按 ➕ 建立)</option>';
     }
+    updateDurationInputs();
     await renderClassStudents();
 }
 

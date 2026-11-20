@@ -37,6 +37,7 @@ let satelliteEls = [];
 const chart = document.getElementById('seatingChart');
 const dateInput = document.getElementById('dateSelect');
 
+let currentTeacherName = "";
 let currentCategory = "";
 let lastSelectedClass = "";
 let lastSelectedDate = "";
@@ -46,6 +47,12 @@ let dailyListenerRef = null;
 let originalStudentsMap = {};
 let draftStudents = [];
 let hasUnsavedChanges = false;
+
+// 課程時長與跨班點名提醒資料
+let courseDurations = { categories: {}, classes: {} };
+let otherClassNoticesByKey = {};
+let dismissedNoticeSigs = {};
+let activeNoticeStu = null;
 
 let activeSheetStuId = null;
 let currentEditStuId = null;
@@ -64,6 +71,215 @@ function getCurrentTimeHHMM() {
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
+function formatHHMM(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function initCurrentTeacherName() {
+    if (typeof firebase === 'undefined' || !firebase.auth) return;
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) return;
+        try {
+            const snap = await window.db.ref(`users/${user.uid}/name`).once('value');
+            currentTeacherName = snap.val() || user.displayName || user.email || '老師';
+        } catch (_) {
+            currentTeacherName = user.displayName || user.email || '老師';
+        }
+    });
+}
+initCurrentTeacherName();
+
+// ==================== 3. 課程時長與跨班提醒比對邏輯 ====================
+async function loadCourseDurations() {
+    try {
+        const snap = await window.db.ref('courseDurations').once('value');
+        const val = snap.val() || {};
+        courseDurations = {
+            categories: val.categories || {},
+            classes: val.classes || {}
+        };
+    } catch (err) {
+        console.error("讀取課程時長失敗，改用預設 45 分鐘：", err);
+    }
+}
+loadCourseDurations();
+
+function getCourseDurationMinutes(cat, cls) {
+    const clsDur = courseDurations.classes?.[cat]?.[cls];
+    if (clsDur && Number(clsDur) > 0) return Number(clsDur);
+    const catDur = courseDurations.categories?.[cat];
+    if (catDur && Number(catDur) > 0) return Number(catDur);
+    return 45;
+}
+
+// 每 30 秒自動檢查一次，過了課程時長的紅點會自動消失
+setInterval(() => {
+    if (typeof updateNoticeDotsOnly === 'function') updateNoticeDotsOnly();
+}, 30000);
+
+function getStudentMatchKeys(stu, category, className) {
+    const keys = [];
+    if (stu.studentNumber) keys.push(`num:${String(stu.studentNumber).trim()}`);
+    const hr = (category === '周間普通班') ? className : (stu.originalClass || '');
+    if (hr && stu.name) keys.push(`hr:${String(hr).trim()}_${String(stu.name).trim()}`);
+    if (keys.length === 0 && stu.name) keys.push(`name:${String(stu.name).trim()}`);
+    return keys;
+}
+
+function rebuildCrossClassNotices(dailyData, curCat, curCls) {
+    const map = {};
+    const now = Date.now();
+    if (!dailyData) {
+        otherClassNoticesByKey = {};
+        return;
+    }
+    for (const cat in dailyData) {
+        if (!dailyData[cat]) continue;
+        for (const cls in dailyData[cat]) {
+            if (cat === curCat && cls === curCls) continue;
+            const list = dailyData[cat][cls];
+            if (!Array.isArray(list)) continue;
+
+            const durationMs = getCourseDurationMinutes(cat, cls) * 60 * 1000;
+
+            list.forEach(s => {
+                if (!s || s.id === '_placeholder' || !s.status || s.status === '未點名') return;
+                if (!s.updatedAt) return;
+
+                const expiresAt = s.updatedAt + durationMs;
+                if (now > expiresAt) return;
+
+                const record = {
+                    category: cat,
+                    className: cls,
+                    status: s.status,
+                    reason: s.reason || '',
+                    note: s.note || '',
+                    timeIn: s.timeIn || '',
+                    timeOut: s.timeOut || '',
+                    updatedBy: s.updatedBy || '',
+                    updatedAt: s.updatedAt,
+                    expiresAt: expiresAt
+                };
+                getStudentMatchKeys(s, cat, cls).forEach(k => {
+                    if (!map[k]) map[k] = [];
+                    map[k].push(record);
+                });
+            });
+        }
+    }
+    otherClassNoticesByKey = map;
+}
+
+function getCrossClassNotices(stu) {
+    const selEl = document.getElementById('adminClassSelect') || document.getElementById('classSelect');
+    const className = (selEl ? selEl.value : '') || lastSelectedClass || '';
+    const keys = getStudentMatchKeys(stu, currentCategory, className);
+    const now = Date.now();
+    const seen = new Set();
+    const results = [];
+
+    keys.forEach(k => {
+        (otherClassNoticesByKey[k] || []).forEach(rec => {
+            if (rec.expiresAt && now > rec.expiresAt) return;
+            const uniq = `${rec.category}|${rec.className}`;
+            if (!seen.has(uniq)) {
+                seen.add(uniq);
+                results.push(rec);
+            }
+        });
+    });
+
+    results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    return results;
+}
+
+function getNoticeSignature(notices) {
+    return notices
+        .map(n => `${n.category}|${n.className}|${n.status}|${n.updatedAt}|${n.reason}|${n.timeIn}|${n.timeOut}`)
+        .join(';;');
+}
+
+function getNoticeReadKey(stuId) {
+    const cls = document.getElementById('classSelect').value || lastSelectedClass || '';
+    return `${dateInput.value}_${currentCategory}_${cls}_${stuId}`;
+}
+
+function hasUnreadCrossNotice(stu) {
+    const notices = getCrossClassNotices(stu);
+    if (notices.length === 0) return false;
+    return dismissedNoticeSigs[getNoticeReadKey(stu.id)] !== getNoticeSignature(notices);
+}
+
+function updateNoticeDotsOnly() {
+    draftStudents.forEach(stu => {
+        const badge = document.getElementById(`stu_${stu.id}`);
+        if (!badge) return;
+        const dot = badge.querySelector('.cross-notice-dot');
+        if (dot) {
+            dot.style.display = hasUnreadCrossNotice(stu) ? 'block' : 'none';
+        }
+    });
+}
+
+function openCrossNoticeModal(stu) {
+    const notices = getCrossClassNotices(stu);
+    if (notices.length === 0) return;
+
+    activeNoticeStu = stu;
+    document.getElementById('crossNoticeTitle').innerText = `${stu.id}號 ${stu.name} — 今日他班點名紀錄`;
+
+    const listEl = document.getElementById('crossNoticeList');
+    listEl.innerHTML = notices.map(rec => {
+        const timeStr = rec.updatedAt ? formatHHMM(rec.updatedAt) : '今日稍早';
+        const teacherStr = rec.updatedBy ? `${rec.updatedBy} 老師` : '其他老師';
+        let extraParts = [];
+        if (rec.status === '部分出席' && (rec.timeIn || rec.timeOut)) {
+            extraParts.push(`時間：${rec.timeIn || '--:--'} ~ ${rec.timeOut || '--:--'}`);
+        }
+        if (rec.reason) extraParts.push(`原因：${rec.reason}`);
+        if (rec.note) extraParts.push(`備註：${rec.note}`);
+        const extraHtml = extraParts.length > 0
+            ? `<span class="notice-extra">${extraParts.join(' ｜ ')}</span>`
+            : '';
+
+        return `
+            <div class="notice-item">
+                本生於 <strong>${timeStr}</strong> 曾被 <strong>${teacherStr}</strong> 於【${rec.category} - ${rec.className}】點名為 <span class="notice-status-pill">${rec.status}</span>
+                ${extraHtml}
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('crossNoticeModal').style.display = 'flex';
+}
+
+function dismissCrossNoticeModal() {
+    if (activeNoticeStu) {
+        const notices = getCrossClassNotices(activeNoticeStu);
+        if (notices.length > 0) {
+            dismissedNoticeSigs[getNoticeReadKey(activeNoticeStu.id)] = getNoticeSignature(notices);
+        }
+        activeNoticeStu = null;
+        updateNoticeDotsOnly();
+    }
+    document.getElementById('crossNoticeModal').style.display = 'none';
+}
+
+function handleStudentCardClick(studentId) {
+    const stu = draftStudents.find(s => String(s.id) === String(studentId));
+    if (!stu) return;
+    if (hasUnreadCrossNotice(stu)) {
+        openCrossNoticeModal(stu);
+        return;
+    }
+    openModal(studentId);
+}
+
+// ==================== 4. 提示與防呆工具 ====================
 function showToast(msg) {
     const box = document.getElementById('toastBox');
     if (!box) return;
@@ -120,7 +336,7 @@ window.addEventListener('beforeunload', (e) => {
     }
 });
 
-// ==================== 3. 系統初始化與立體星環物理引擎 ====================
+// ==================== 5. 系統初始化與立體星環物理引擎 ====================
 async function loadTeacherCategories() {
     let list = [...DEFAULT_CATEGORIES];
     try {
@@ -371,7 +587,7 @@ function renderOrbitPositions() {
     }
 }
 
-// ==================== 4. 進入班種與切換班級 ====================
+// ==================== 6. 進入班種與切換班級 ====================
 async function selectCategory(category) {
     currentCategory = category;
     document.getElementById('step1').style.display = 'none';
@@ -385,6 +601,7 @@ async function selectCategory(category) {
     lastSelectedClass = "";
     draftStudents = [];
     originalStudentsMap = {};
+    otherClassNoticesByKey = {};
     refreshDirtyUI();
     initGrid();
 
@@ -413,6 +630,7 @@ function goBack() {
     hasUnsavedChanges = false;
     draftStudents = [];
     originalStudentsMap = {};
+    otherClassNoticesByKey = {};
     lastSelectedClass = "";
     refreshDirtyUI();
     if (dailyListenerRef) dailyListenerRef.off();
@@ -465,7 +683,7 @@ function handleDateOrClassChange(source) {
     loadSeatingChart();
 }
 
-// ==================== 5. 讀取與監聽當日班級資料 ====================
+// ==================== 7. 讀取與監聽當日班級資料 ====================
 function loadSeatingChart() {
     const className = document.getElementById('classSelect').value;
     const date = dateInput.value;
@@ -475,6 +693,7 @@ function loadSeatingChart() {
     if (!className) {
         draftStudents = [];
         originalStudentsMap = {};
+        otherClassNoticesByKey = {};
         refreshDirtyUI();
         initGrid();
         document.getElementById('lastUpdate').innerText = '請選擇班級';
@@ -508,7 +727,11 @@ function loadSeatingChart() {
             await window.db.ref(`attendance_${date}`).set(newData);
         }
 
+        // 不論本地是否正在編輯，都即時更新跨班點名提醒紅點
+        rebuildCrossClassNotices(dailyData, currentCategory, className);
+
         if (hasUnsavedChanges) {
+            updateNoticeDotsOnly();
             document.getElementById('lastUpdate').innerText = `雲端有更新（本地編輯中）`;
             return;
         }
@@ -539,7 +762,7 @@ function loadSeatingChart() {
     });
 }
 
-// ==================== 6. 繪製 6×6 座位表與綁定手勢 ====================
+// ==================== 8. 繪製 6×6 座位表與綁定手勢 ====================
 function renderGrid() {
     initGrid();
     if (!draftStudents || draftStudents.length === 0) return;
@@ -552,6 +775,7 @@ function renderGrid() {
         else if (["病假", "喪假", "事假", "因故缺席"].includes(student.status)) glowClass = "glow-yellow";
 
         const dirtyClass = isStudentModified(student) ? "is-dirty" : "";
+        const showRedDot = hasUnreadCrossNotice(student);
 
         let extraInfo = "";
         if (student.status === "部分出席" && (student.timeIn || student.timeOut)) {
@@ -567,6 +791,7 @@ function renderGrid() {
         badge.className = `student-badge ${glowClass} ${dirtyClass}`;
         badge.id = `stu_${student.id}`;
         badge.innerHTML = `
+            <span class="cross-notice-dot" style="display:${showRedDot ? 'block' : 'none'};" title="今日在他班有點名紀錄"></span>
             ${origClassBadge}
             <span class="stu-name">${student.id} ${student.name}</span>
             <span class="stu-status">${student.status}</span>
@@ -578,7 +803,7 @@ function renderGrid() {
         if (interactionMode === 'seat') {
             badge.setAttribute('draggable', 'true');
             badge.addEventListener('dragstart', (ev) => drag(ev, student.id));
-            badge.addEventListener('click', () => openModal(student.id));
+            badge.addEventListener('click', () => handleStudentCardClick(student.id));
         } else {
             badge.setAttribute('draggable', 'false');
             bindSwipeEvents(badge, student.id);
@@ -600,7 +825,7 @@ function renderGrid() {
     });
 }
 
-// ==================== 7. 四向滑動手勢引擎 ====================
+// ==================== 9. 四向滑動手勢引擎 ====================
 function bindSwipeEvents(badgeEl, studentId) {
     const SWIPE_THRESHOLD = 30;
     const overlayTag = badgeEl.querySelector('.swipe-overlay-tag');
@@ -671,7 +896,7 @@ function bindSwipeEvents(badgeEl, studentId) {
         }
 
         if (!hasMoved) {
-            openModal(studentId);
+            handleStudentCardClick(studentId);
             return;
         }
 
@@ -703,7 +928,7 @@ function applyStudentDraft(studentId, updates) {
     renderGrid();
 }
 
-// ==================== 8. 上滑：假別挑選底部卡片 ====================
+// ==================== 10. 上滑：假別挑選底部卡片 ====================
 function openLeaveSheet(studentId) {
     const stu = draftStudents.find(s => String(s.id) === String(studentId));
     if (!stu) return;
@@ -780,7 +1005,7 @@ function closeLeaveSheet(ev) {
     activeSheetStuId = null;
 }
 
-// ==================== 9. 下滑：部分出席底部卡片 ====================
+// ==================== 11. 下滑：部分出席底部卡片 ====================
 function openPartialSheet(studentId) {
     const stu = draftStudents.find(s => String(s.id) === String(studentId));
     if (!stu) return;
@@ -824,7 +1049,7 @@ function closePartialSheet(ev) {
     activeSheetStuId = null;
 }
 
-// ==================== 10. 講台左「全到」＆ 講台右「送出點名」 ====================
+// ==================== 12. 講台左「全到」＆ 講台右「送出點名」 ====================
 function markAllPresent() {
     const className = document.getElementById('classSelect').value;
     if (!className) return alert("請先選擇班級！");
@@ -872,10 +1097,22 @@ async function submitAttendance() {
     submitBtn.disabled = true;
     submitBtn.innerText = '⏳ 送出中...';
 
+    const nowTs = Date.now();
+    const teacherName = currentTeacherName || document.getElementById('navUserName')?.innerText || '老師';
+
     try {
         const changedLogs = modifiedList.map(stu => {
             const orig = originalStudentsMap[String(stu.id)] || {};
             const oldStatus = orig.status || "未點名";
+
+            if (stu.status === "未點名") {
+                stu.updatedBy = "";
+                stu.updatedAt = 0;
+            } else {
+                stu.updatedBy = teacherName;
+                stu.updatedAt = nowTs;
+            }
+
             let detail = `將 [${date}] ${className} ${stu.id}號 ${stu.name} 從「${oldStatus}」改為「${stu.status}」`;
             if (stu.status === '部分出席' && (stu.timeIn || stu.timeOut)) {
                 detail += ` (${stu.timeIn}~${stu.timeOut})`;
@@ -886,7 +1123,7 @@ async function submitAttendance() {
         });
 
         await window.db.ref(`attendance_${date}/${currentCategory}/${className}`).set(draftStudents);
-        await window.db.ref(`attendance_meta/${date}/${currentCategory}/${className}`).set(Date.now());
+        await window.db.ref(`attendance_meta/${date}/${currentCategory}/${className}`).set(nowTs);
 
         if (typeof logActivity === 'function' && changedLogs.length > 0) {
             await Promise.all(changedLogs.map(detail => logActivity('點名紀錄', detail)));
@@ -911,7 +1148,7 @@ async function submitAttendance() {
     }
 }
 
-// ==================== 11. 調整座位模式：拖曳互換座位 ====================
+// ==================== 13. 調整座位模式：拖曳互換座位 ====================
 let draggedId = null;
 
 function allowDrop(ev) {
@@ -972,7 +1209,7 @@ async function drop(ev, slotIndex) {
     showToast("🪑 座位已更新並儲存");
 }
 
-// ==================== 12. 輕點卡片：完整狀態修改 Modal ====================
+// ==================== 14. 輕點卡片：完整狀態修改 Modal ====================
 function openModal(stuId) {
     const student = draftStudents.find(s => String(s.id) === String(stuId));
     if (!student) return;

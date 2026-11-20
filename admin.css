@@ -896,3 +896,100 @@ body::before {
     .leave-card-grid { grid-template-columns: repeat(2, 1fr); }
     .time-group { flex-direction: column; align-items: stretch; }
 }
+
+/* ==================== 跨班點名提醒小紅點與彈窗 ==================== */
+/* 將原本「未送出變更」的小金點改放左上角，避免與右上角通知紅點重疊 */
+.student-badge.is-dirty::after {
+    left: 6px;
+    right: auto;
+}
+
+/* 類似社群 App 圖示右上角的通知小紅點 */
+.cross-notice-dot {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #e74c3c 70%, #b02a1e);
+    border: 2px solid #0e1418;
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.75), 0 2px 6px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    z-index: 10;
+    animation: redDotPulse 1.8s infinite;
+}
+
+@keyframes redDotPulse {
+    0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.75), 0 2px 6px rgba(0, 0, 0, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0), 0 2px 6px rgba(0, 0, 0, 0.6); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0), 0 2px 6px rgba(0, 0, 0, 0.6); }
+}
+
+.notice-modal-content {
+    border-color: rgba(231, 76, 60, 0.65);
+    max-width: 460px;
+}
+
+.notice-modal-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffb3b3;
+    background: rgba(231, 76, 60, 0.22);
+    border: 1px solid rgba(231, 76, 60, 0.55);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.8px;
+}
+
+.notice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 45vh;
+    overflow-y: auto;
+    margin: 12px 0;
+}
+
+.notice-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(212, 180, 117, 0.28);
+    border-left: 3px solid #e74c3c;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #eef3f1;
+    text-align: left;
+}
+
+.notice-item strong {
+    color: #ebd29b;
+}
+
+.notice-status-pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 2px;
+    background: rgba(212, 180, 117, 0.2);
+    border: 1px solid rgba(212, 180, 117, 0.5);
+    color: #fff2cc;
+}
+
+.notice-extra {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #aeb9b6;
+}
+
+.notice-footer-hint {
+    font-size: 12px;
+    color: #aeb9b6;
+    margin: 8px 0 4px;
+    text-align: center;
+}
