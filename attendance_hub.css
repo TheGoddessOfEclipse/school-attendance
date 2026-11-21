@@ -1,0 +1,233 @@
+:root {
+    --bg-dark: #0e1418;
+    --gold: #d4b475;
+    --gold-dim: rgba(212, 180, 117, 0.35);
+    --gold-glow: rgba(212, 180, 117, 0.48);
+    --amber-glow: rgba(241, 196, 15, 0.32);
+    --text-main: #f4f6f5;
+    --text-muted: #aeb9b6;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Noto Sans TC', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* 固定式校園走廊暗金＋琥珀氛圍背景 */
+.page-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        radial-gradient(circle at 50% 44%, rgba(168, 118, 22, 0.24) 0%, rgba(12, 16, 20, 0.86) 76%),
+        linear-gradient(to bottom, rgba(12, 16, 20, 0.68), rgba(14, 22, 19, 0.90)),
+        url('images/schollhallway.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.hub-wrapper {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 16px 28px;
+}
+
+.orbit-section {
+    min-height: calc(100vh - 104px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    animation: fadeIn 0.35s ease;
+}
+
+.orbit-stage {
+    position: relative;
+    width: min(94vw, 900px);
+    height: min(60vh, 480px);
+    min-height: 360px;
+    margin: 0 auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+}
+
+.orbit-stage.dragging { cursor: grabbing; }
+
+/* 正中央：差勤紀錄核心菱形（琥珀金） */
+.center-diamond {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 162px;
+    height: 162px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: linear-gradient(135deg, rgba(212, 152, 24, 0.56), rgba(74, 46, 12, 0.94));
+    border: 1.5px solid var(--gold);
+    border-radius: 7px;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.62), 0 0 34px var(--amber-glow);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.center-diamond::before {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgba(212, 180, 117, 0.55);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.center-diamond:hover {
+    transform: translate(-50%, -50%) rotate(45deg) scale(1.06);
+    box-shadow: 0 22px 52px rgba(0, 0, 0, 0.68), 0 0 42px rgba(241, 196, 15, 0.45);
+}
+
+.center-inner {
+    transform: rotate(-45deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 174px;
+    pointer-events: none;
+    text-align: center;
+}
+
+.center-icon { font-size: 36px; line-height: 1; margin-bottom: 6px; }
+.center-label { font-family: 'Noto Serif TC', serif; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: 2px; }
+.center-current { font-size: 12px; color: #ffeaa7; margin-top: 5px; letter-spacing: 0.8px; }
+
+/* 2 顆衛星菱形 */
+.sat-diamond {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, rgba(46, 36, 20, 0.88), rgba(16, 18, 22, 0.95));
+    border: 1px solid rgba(212, 180, 117, 0.4);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.52);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    will-change: transform, opacity;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.sat-diamond::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(212, 180, 117, 0.22);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.sat-diamond.is-active {
+    background: linear-gradient(135deg, rgba(212, 152, 24, 0.72), rgba(78, 50, 14, 0.96));
+    border: 1.5px solid var(--gold);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.68), 0 0 30px var(--gold-glow);
+}
+
+.sat-diamond.is-active::before { border-color: rgba(255, 234, 167, 0.8); }
+
+.sat-inner {
+    transform: rotate(-45deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 132px;
+    pointer-events: none;
+}
+
+.sat-icon { font-size: 28px; line-height: 1.1; margin-bottom: 4px; }
+.sat-name { font-family: 'Noto Serif TC', serif; font-size: 16px; font-weight: 700; color: #ffffff; letter-spacing: 1px; white-space: nowrap; }
+.sat-sub { font-size: 10px; color: var(--gold); margin-top: 3px; letter-spacing: 0.8px; }
+
+.orbit-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.active-module-desc { font-size: 14px; color: #e4eae8; text-align: center; letter-spacing: 0.8px; min-height: 22px; padding: 0 12px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65); }
+
+.active-control-row { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 440px; }
+
+.step-arrow {
+    width: 48px;
+    height: 48px;
+    border-radius: 9px;
+    border: 1px solid var(--gold-dim);
+    background: rgba(14, 20, 24, 0.8);
+    color: var(--gold);
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+.step-arrow:hover { background: rgba(212, 180, 117, 0.2); border-color: var(--gold); }
+
+.btn-enter-module {
+    flex: 1;
+    height: 48px;
+    padding: 0 24px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #d4b475, #a98643);
+    color: #0e1418;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.48);
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+.btn-enter-module:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.enter-prefix { font-size: 13px; font-weight: 700; opacity: 0.78; }
+
+.footer-subrow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.btn-lobby-link { color: var(--gold); text-decoration: none; font-weight: 600; }
+.btn-lobby-link:hover { opacity: 0.8; text-decoration: underline; }
+.hint-sep { opacity: 0.4; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 540px) {
+    .center-diamond { width: 122px; height: 122px; }
+    .center-icon { font-size: 26px; }
+    .center-label { font-size: 17px; }
+    .sat-diamond { width: 92px; height: 92px; }
+    .sat-icon { font-size: 22px; }
+    .sat-name { font-size: 13px; }
+    .sat-sub, .hint-sep, .orbit-hint { display: none; }
+}

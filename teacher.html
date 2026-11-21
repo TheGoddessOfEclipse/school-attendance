@@ -17,7 +17,6 @@
     <!-- ==================== STEP 1：無軌道立體星環班種選單 ==================== -->
     <section id="step1" class="orbit-section">
         <div class="orbit-stage" id="orbitStage">
-            <!-- 正中央：教師點名核心菱形 -->
             <button type="button" class="center-diamond" id="centerDiamond" onclick="enterActiveCategory()" title="點擊進入目前選取的班種">
                 <div class="center-inner">
                     <span class="center-icon">👩‍🏫</span>
@@ -25,12 +24,9 @@
                     <span class="center-current" id="centerCurrentLabel">載入中...</span>
                 </div>
             </button>
-
-            <!-- 衛星班種菱形（動態讀取 Firebase categories 生成） -->
             <div id="orbitSatellites"></div>
         </div>
 
-        <!-- 底部鎖定資訊與快捷控制列 -->
         <div class="orbit-footer">
             <div class="active-control-row">
                 <button type="button" class="step-arrow" onclick="stepOrbit(-1)" aria-label="上一個班種">◀</button>
@@ -49,21 +45,28 @@
     <section id="step2" class="attendance-section" style="display: none;">
         <div class="attendance-card">
             <div class="top-bar">
-                <button type="button" onclick="goBack()" class="btn-back">⬅ 重選班種</button>
+                <button type="button" onclick="goBack()" class="btn-back">⬅ 返回星環</button>
 
                 <div class="mode-switch" role="group" aria-label="切換操作模式">
                     <button type="button" id="btnModeSwipe" class="mode-btn active" onclick="setInteractionMode('swipe')">✋ 滑動點名</button>
                     <button type="button" id="btnModeSeat" class="mode-btn" onclick="setInteractionMode('seat')">🪑 調整座位</button>
                 </div>
 
-                <input type="date" id="dateSelect" class="date-picker" onchange="handleDateOrClassChange('date')">
-            </div>
-
-            <div class="class-header">
-                <span class="category-badge" id="selectedCategoryTitle"></span>
-                <select id="classSelect" class="class-select" onchange="handleDateOrClassChange('class')"></select>
                 <span id="unsavedIndicator" class="unsaved-pill" style="display:none;">● 尚有未送出變更</span>
                 <span class="last-update-badge" id="lastUpdate">等待選擇班級...</span>
+            </div>
+
+            <!-- 🌟 互動句子標題列：這是【班種】【班級】【?月?日 星期?】【第?節】之點名表 -->
+            <div class="sentence-bar">
+                <span class="sentence-text">這是</span>
+                <select id="categorySelect" class="inline-select select-cat" onchange="handleSentenceChange('category')"></select>
+                <select id="classSelect" class="inline-select select-cls" onchange="handleSentenceChange('class')"></select>
+                <label class="inline-date-wrap" title="點擊切換日期">
+                    <span id="dateDisplayText">載入日期...</span>
+                    <input type="date" id="dateSelect" class="hidden-date-input" onchange="handleSentenceChange('date')">
+                </label>
+                <select id="periodSelect" class="inline-select select-period" onchange="handleSentenceChange('period')"></select>
+                <span class="sentence-text">之點名表</span>
             </div>
 
             <div class="status-legend">
@@ -192,11 +195,11 @@
     </div>
 </div>
 
-<!-- ==================== 他班點名提醒彈跳視窗 ==================== -->
+<!-- ==================== 他班同節點名提醒彈跳視窗 ==================== -->
 <div id="crossNoticeModal" class="modal-overlay" onclick="if(event.target === this) dismissCrossNoticeModal()">
     <div class="modal-content notice-modal-content">
-        <div class="notice-modal-badge">🔔 跨班點名提醒</div>
-        <h3 id="crossNoticeTitle" class="modal-title" style="margin-top: 6px;">今日他班紀錄</h3>
+        <div class="notice-modal-badge">🔔 本節課跨班點名提醒</div>
+        <h3 id="crossNoticeTitle" class="modal-title" style="margin-top: 6px;">本節課他班紀錄</h3>
         <div id="crossNoticeList" class="notice-list"></div>
         <p class="notice-footer-hint">此紀錄僅供查證參考，關閉後即可照常進行點名操作。</p>
         <div class="modal-actions">
@@ -205,7 +208,6 @@
     </div>
 </div>
 
-<!-- 輕量懸浮提示列 -->
 <div id="toastBox" class="toast-box" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>

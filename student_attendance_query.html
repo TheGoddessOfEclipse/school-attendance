@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生差勤查詢 - 石榴科技實驗學校</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="manage_students.css">
+    <style>
+        .container { max-width: 1180px; }
+        .query-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(212, 180, 117, 0.24);
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+        .query-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .selected-stu-pill {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            background: rgba(212, 180, 117, 0.16);
+            border: 1px solid rgba(212, 180, 117, 0.55);
+            font-size: 14px;
+        }
+        .summary-grid {
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .summary-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(212, 180, 117, 0.22);
+            border-radius: 10px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+        .summary-label { font-size: 12px; color: #aeb9b6; margin-bottom: 4px; }
+        .summary-val { font-family: 'Noto Serif TC', serif; font-size: 26px; font-weight: 800; color: #ebd29b; }
+        .val-green { color: #58d68d; }
+        .val-yellow { color: #f7dc6f; }
+        .val-purple { color: #d2b4de; }
+        .val-red { color: #ff8a80; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .st-present { background: rgba(39, 174, 96, 0.28); border: 1px solid rgba(82, 190, 128, 0.6); color: #d4f5e2; }
+        .st-absent { background: rgba(231, 76, 60, 0.3); border: 1px solid rgba(231, 76, 60, 0.7); color: #ffd6d2; }
+        .st-leave { background: rgba(241, 196, 15, 0.24); border: 1px solid rgba(247, 220, 111, 0.65); color: #fef3c7; }
+        .st-partial { background: rgba(155, 89, 182, 0.3); border: 1px solid rgba(187, 143, 206, 0.65); color: #f3e6fa; }
+
+        @media (max-width: 720px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="attendance_hub.html" class="btn-back">⬅ 返回差勤紀錄</a>
+        <h2>🔍 學生個人差勤查詢</h2>
+        <button type="button" id="btnExportPdf" onclick="exportStudentAttendancePDF()" class="btn-add btn-crimson" style="margin-left:auto; display:none;">📄 友善列印 / 產出 PDF</button>
+    </div>
+
+    <div class="query-panel">
+        <div class="query-row">
+            <div style="position: relative; flex: 1; min-width: 240px;">
+                <input type="text" id="stuSearchInput" placeholder="🔍 輸入學號、姓名或班級搜尋學生..." autocomplete="off" style="width: 100%;">
+                <div id="stuSearchDropdown" class="autocomplete-items" style="display:none;"></div>
+            </div>
+            <div id="selectedStuPill" class="selected-stu-pill">
+                <span id="selStuText"></span>
+                <button type="button" onclick="clearSelectedStudent()" style="background:none; border:none; color:#ff8a80; cursor:pointer; font-weight:bold;">✕</button>
+            </div>
+        </div>
+
+        <div class="query-row">
+            <span style="color:#aeb9b6; font-size:14px;">查詢期間：</span>
+            <input type="date" id="startDateInput" style="max-width: 180px;">
+            <span style="color:#ebd29b; font-weight:bold;">至</span>
+            <input type="date" id="endDateInput" style="max-width: 180px;">
+            <button type="button" id="btnRunQuery" onclick="runStudentQuery()" class="btn-add" style="padding: 10px 22px;">🔍 開始查詢</button>
+        </div>
+    </div>
+
+    <!-- 統計摘要卡片 -->
+    <div id="summaryGrid" class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-label">總點名節數</div>
+            <div class="summary-val" id="sumTotal">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">出席</div>
+            <div class="summary-val val-green" id="sumPresent">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">各類請假</div>
+            <div class="summary-val val-yellow" id="sumLeave">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">部分出席</div>
+            <div class="summary-val val-purple" id="sumPartial">0</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">無故缺席</div>
+            <div class="summary-val val-red" id="sumAbsent">0</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th width="13%">日期</th>
+                    <th width="11%">節次</th>
+                    <th width="16%">班種 / 班級</th>
+                    <th width="13%">點名狀態</th>
+                    <th width="31%">原因 / 時間 / 備註</th>
+                    <th width="16%">登記人員</th>
+                </tr>
+            </thead>
+            <tbody id="resultTableBody">
+                <tr><td colspan="6" style="color:#aeb9b6; padding:28px;">請先選擇學生與日期區間，再點擊「🔍 開始查詢」</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="teacher"></script>
+<script src="student_attendance_query.js"></script>
+</body>
+</html>

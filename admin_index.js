@@ -1,11 +1,11 @@
-// ==================== 1. 行政後端 5 大業務模組設定 ====================
+// ==================== 1. 行政後端 6 大業務模組設定 ====================
 const ADMIN_MODULES = [
     {
         key: 'attendance',
         name: '出席狀況檢視',
         sub: '巡堂監控',
         icon: '📋',
-        desc: '巡堂座位表、檢視與修改每日點名狀況',
+        desc: '巡堂座位表、檢視與修改每日各節點名狀況',
         href: 'admin.html'
     },
     {
@@ -15,6 +15,14 @@ const ADMIN_MODULES = [
         icon: '🏫',
         desc: '建立與刪除班種、班級、社團、校隊與各科分組名單',
         href: 'manage_classes.html'
+    },
+    {
+        key: 'schedule',
+        name: '節次時間管理',
+        sub: '課表設定',
+        icon: '🕒',
+        desc: '設定平日與假日每日節數與每節課起訖時間',
+        href: 'manage_schedule.html'
     },
     {
         key: 'students',
@@ -29,7 +37,7 @@ const ADMIN_MODULES = [
         name: '點名資料查詢',
         sub: '到席統計',
         icon: '📊',
-        desc: '檢視各班點名狀況、到席率與未到清單',
+        desc: '檢視各班各節點名狀況、到席率與未到清單',
         href: 'query_attendance.html'
     },
     {
@@ -46,7 +54,7 @@ const STEP_ANGLE = (Math.PI * 2) / ADMIN_MODULES.length;
 const MIN_SCALE = 0.68;
 const MAX_SCALE = 1.24;
 
-let orbitAngle = 0;       // 0 表示第 0 顆（出席狀況檢視）鎖定在正前方 6 點鐘方向
+let orbitAngle = 0;
 let targetAngle = null;
 let angularVelocity = 0;
 let isDragging = false;
@@ -264,7 +272,7 @@ function renderOrbitPositions() {
 
         const x = cosT * rx;
         const y = sinT * ry;
-        const depth = (sinT + 1) / 2; // 0 = 後方，1 = 正前方 6 點鐘
+        const depth = (sinT + 1) / 2;
 
         const scale = MIN_SCALE + depth * (MAX_SCALE - MIN_SCALE);
         const opacity = 0.44 + depth * 0.56;

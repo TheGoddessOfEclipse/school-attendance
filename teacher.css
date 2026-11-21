@@ -1167,3 +1167,125 @@ body {
     margin: 8px 0 4px;
     text-align: center;
 }
+
+/* ==================== 互動句子標題列 ==================== */
+.sentence-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(212, 180, 117, 0.3);
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+}
+
+.sentence-text {
+    color: var(--gold-bright);
+}
+
+.inline-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 6px 26px 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(212, 180, 117, 0.55);
+    background-color: rgba(10, 18, 15, 0.85);
+    background-image: linear-gradient(45deg, transparent 50%, #d4b475 50%), linear-gradient(135deg, #d4b475 50%, transparent 50%);
+    background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    color: #ffffff;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inline-select:hover,
+.inline-select:focus {
+    border-color: var(--gold-bright);
+    box-shadow: 0 0 0 2px rgba(212, 180, 117, 0.22);
+}
+
+.inline-select option {
+    background: #14221e;
+    color: #ffffff;
+}
+
+.select-cat {
+    background-color: rgba(39, 174, 96, 0.28);
+    border-color: rgba(82, 190, 128, 0.65);
+    color: #e4faec;
+}
+
+.select-period {
+    background-color: rgba(142, 68, 173, 0.28);
+    border-color: rgba(187, 143, 206, 0.6);
+    color: #f3e6fa;
+}
+
+.inline-date-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(212, 180, 117, 0.55);
+    background: rgba(212, 180, 117, 0.14);
+    color: var(--gold-bright);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inline-date-wrap:hover {
+    border-color: var(--gold-bright);
+    background: rgba(212, 180, 117, 0.24);
+}
+
+.hidden-date-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.stu-cross-tag {
+    font-size: 10px;
+    color: #ffeaa7;
+    background: rgba(212, 152, 16, 0.35);
+    border: 1px solid rgba(247, 220, 111, 0.55);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 讓整個日期按鈕點擊都能直接展開日曆選單 */
+.hidden-date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+}

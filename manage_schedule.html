@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>節次時間管理 - 行政後台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="manage_students.css">
+    <style>
+        .container { max-width: 960px; }
+        .tab-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 18px;
+            border-radius: 9px;
+            border: 1px solid rgba(212, 180, 117, 0.34);
+            background: rgba(255, 255, 255, 0.05);
+            color: #aeb9b6;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover {
+            border-color: #d4b475;
+            color: #ffffff;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(142, 68, 173, 0.55), rgba(56, 24, 78, 0.92));
+            border-color: #d4b475;
+            color: #ebd29b;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+        .schedule-hint {
+            font-size: 13px;
+            color: #aeb9b6;
+            line-height: 1.6;
+            margin: 0 0 16px 0;
+            padding: 10px 14px;
+            background: rgba(212, 180, 117, 0.08);
+            border: 1px solid rgba(212, 180, 117, 0.24);
+            border-radius: 8px;
+        }
+        .schedule-input-name {
+            width: 100%;
+            min-width: 130px;
+            text-align: center;
+            font-weight: 700;
+        }
+        .schedule-input-time {
+            width: 135px;
+            min-width: 125px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 15px !important;
+        }
+        .order-badge {
+            display: inline-block;
+            min-width: 28px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(212, 180, 117, 0.16);
+            border: 1px solid rgba(212, 180, 117, 0.4);
+            color: #ebd29b;
+            font-weight: 700;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="admin_index.html" class="btn-back">⬅ 返回首頁</a>
+        <h2>🕒 節次與課表時間管理</h2>
+    </div>
+
+    <p class="schedule-hint">
+        💡 設定好每日的節次名稱與上課起訖時間後，教師端與行政巡堂進入點名表時，系統會依照當下時間自動帶入對應節次，並在「同節課」跨班點名時即時連動提醒。
+    </p>
+
+    <!-- 切換平日 / 假日課表 -->
+    <div class="tab-bar">
+        <button type="button" id="tabWeekday" class="tab-btn active" onclick="switchScheduleTab('weekday')">📅 平日課表（週一 ～ 週五）</button>
+        <button type="button" id="tabWeekend" class="tab-btn" onclick="switchScheduleTab('weekend')">☀️ 假日課表（週六 ～ 週日）</button>
+    </div>
+
+    <!-- 操作工具列 -->
+    <div class="add-panel">
+        <button type="button" onclick="addPeriodRow()" class="btn-add btn-emerald">➕ 新增一節課</button>
+        <button type="button" onclick="sortPeriodsByStart()" class="btn-add btn-amber">🔄 依開始時間排序</button>
+        <button type="button" onclick="resetDefaultSchedule()" class="btn-add btn-crimson">↺ 恢復預設範本</button>
+        <button type="button" onclick="saveScheduleConfig()" class="btn-add" style="margin-left:auto;">💾 儲存課表設定</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th width="10%">順序</th>
+                    <th width="30%">節次名稱</th>
+                    <th width="22%">開始時間</th>
+                    <th width="22%">結束時間</th>
+                    <th width="16%">操作</th>
+                </tr>
+            </thead>
+            <tbody id="scheduleTableBody">
+                <tr><td colspan="5">⏳ 載入課表設定中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="firebase_config.js"></script>
+<script src="navbar.js"></script>
+<script src="auth_guard.js" data-role="admin"></script>
+<script src="logger.js"></script>
+<script src="manage_schedule.js"></script>
+</body>
+</html>
