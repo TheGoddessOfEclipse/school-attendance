@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="manage_students.css">
     <style>
-        .container { max-width: 960px; }
+        .container { max-width: 980px; }
         .tab-bar {
             display: flex;
             gap: 10px;
@@ -57,11 +57,11 @@
             font-weight: 700;
         }
         .schedule-input-time {
-            width: 135px;
-            min-width: 125px;
+            width: 162px;
+            min-width: 155px;
             text-align: center;
             font-family: monospace;
-            font-size: 15px !important;
+            font-size: 14px !important;
         }
         .order-badge {
             display: inline-block;
@@ -73,6 +73,58 @@
             color: #ebd29b;
             font-weight: 700;
             font-family: monospace;
+        }
+        .btn-purple {
+            background: linear-gradient(135deg, rgba(142, 68, 173, 0.48), rgba(62, 28, 84, 0.88));
+            color: #f4e8fc;
+            border-color: rgba(187, 143, 206, 0.55);
+        }
+        .btn-purple:hover { border-color: #d4b475; }
+        .btn-sky {
+            background: linear-gradient(135deg, rgba(41, 128, 185, 0.45), rgba(22, 62, 94, 0.88));
+            color: #e6f4fc;
+            border-color: rgba(93, 173, 226, 0.55);
+        }
+        .btn-sky:hover { border-color: #d4b475; }
+
+        /* 模板管理彈窗樣式 */
+        .template-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 12px 0;
+        }
+        .template-row select {
+            flex: 1;
+            min-width: 200px;
+        }
+        .template-meta {
+            font-size: 13px;
+            color: #aeb9b6;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(212, 180, 117, 0.2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+        .edit-template-box {
+            display: none;
+            background: rgba(212, 180, 117, 0.08);
+            border: 1px solid rgba(212, 180, 117, 0.35);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 12px;
+        }
+        .edit-template-box label.overwrite-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #f4f6f5;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -99,6 +151,8 @@
         <button type="button" onclick="addPeriodRow()" class="btn-add btn-emerald">➕ 新增一節課</button>
         <button type="button" onclick="sortPeriodsByStart()" class="btn-add btn-amber">🔄 依開始時間排序</button>
         <button type="button" onclick="resetDefaultSchedule()" class="btn-add btn-crimson">↺ 恢復預設範本</button>
+        <button type="button" onclick="openTemplateModal()" class="btn-add btn-purple">📑 課表模板</button>
+        <button type="button" onclick="openSaveTemplateModal()" class="btn-add btn-sky">📥 存為課表模板</button>
         <button type="button" onclick="saveScheduleConfig()" class="btn-add" style="margin-left:auto;">💾 儲存課表設定</button>
     </div>
 
@@ -107,9 +161,9 @@
             <thead>
                 <tr>
                     <th width="10%">順序</th>
-                    <th width="30%">節次名稱</th>
-                    <th width="22%">開始時間</th>
-                    <th width="22%">結束時間</th>
+                    <th width="28%">節次名稱</th>
+                    <th width="23%">開始時間</th>
+                    <th width="23%">結束時間</th>
                     <th width="16%">操作</th>
                 </tr>
             </thead>
@@ -117,6 +171,54 @@
                 <tr><td colspan="5">⏳ 載入課表設定中...</td></tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- ==================== 存為課表模板 Modal ==================== -->
+<div id="saveTemplateModal" class="modal-overlay" onclick="if(event.target === this) closeSaveTemplateModal()">
+    <div class="modal-content" style="max-width: 440px;">
+        <h3>📥 存為課表模板</h3>
+        <p class="modal-desc">將目前的「平日課表＋假日課表」儲存為可重複套用的模板（例：學期課表、暑期輔導課表）：</p>
+        <input type="text" id="newTemplateNameInput" placeholder="請輸入課表模板名稱（必填）" style="width: 100%; margin-bottom: 6px;">
+        <div class="modal-actions">
+            <button type="button" onclick="confirmSaveTemplate()" class="btn-add">💾 確認儲存模板</button>
+            <button type="button" onclick="closeSaveTemplateModal()" class="btn-back">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 課表模板管理 Modal ==================== -->
+<div id="templateModal" class="modal-overlay" onclick="if(event.target === this) closeTemplateModal()">
+    <div class="modal-content" style="max-width: 620px;">
+        <h3>📑 課表模板管理</h3>
+        <p class="modal-desc">請從下拉選單選擇已儲存的課表模板，可直接套用、編輯或刪除：</p>
+
+        <div class="template-row">
+            <select id="templateSelect" onchange="onTemplateSelectChange()"></select>
+            <button type="button" id="btnUseTpl" onclick="applySelectedTemplate()" class="btn-add btn-emerald">✅ 使用課表模板</button>
+            <button type="button" id="btnEditTpl" onclick="toggleEditTemplateBox()" class="btn-add btn-amber">✏️ 編輯</button>
+            <button type="button" id="btnDeleteTpl" onclick="deleteSelectedTemplate()" class="btn-add btn-crimson">🗑️ 刪除</button>
+        </div>
+
+        <div id="templateMetaInfo" class="template-meta">尚未儲存任何課表模板。</div>
+
+        <!-- 點擊「編輯」時展開的修改區 -->
+        <div id="editTemplateBox" class="edit-template-box">
+            <div style="font-weight:700; color:#ebd29b; margin-bottom:8px; font-size:14px;">✏️ 編輯所選模板</div>
+            <input type="text" id="editTemplateNameInput" placeholder="輸入新的模板名稱" style="width: 100%;">
+            <label class="overwrite-check">
+                <input type="checkbox" id="overwriteTemplateContent">
+                <span>同時以目前畫面上的「平日＋假日課表」覆蓋更新此模板內容</span>
+            </label>
+            <div class="modal-actions" style="margin-top: 10px;">
+                <button type="button" onclick="confirmEditTemplate()" class="btn-add">💾 儲存模板變更</button>
+                <button type="button" onclick="cancelEditTemplateBox()" class="btn-back">取消編輯</button>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" onclick="closeTemplateModal()" class="btn-back">關閉視窗</button>
+        </div>
     </div>
 </div>
 

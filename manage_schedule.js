@@ -22,16 +22,26 @@ let scheduleData = {
     weekday: [],
     weekend: []
 };
+let scheduleTemplates = {};
 let currentTab = 'weekday';
 
+function clonePeriods(arr) {
+    return (Array.isArray(arr) ? arr : []).filter(Boolean).map(p => ({ ...p }));
+}
+
 function cloneDefault(type) {
-    return DEFAULT_SCHEDULE[type].map(p => ({ ...p }));
+    return clonePeriods(DEFAULT_SCHEDULE[type]);
 }
 
 async function loadScheduleConfig() {
     try {
-        const snap = await window.db.ref('scheduleConfig').once('value');
-        const val = snap.val();
+        const [cfgSnap, tplSnap] = await Promise.all([
+            window.db.ref('scheduleConfig').once('value'),
+            window.db.ref('scheduleTemplates').once('value')
+        ]);
+
+        const val = cfgSnap.val();
+        scheduleTemplates = tplSnap.val() || {};
 
         if (!val) {
             scheduleData = {
@@ -41,10 +51,10 @@ async function loadScheduleConfig() {
             await window.db.ref('scheduleConfig').set(scheduleData);
         } else {
             scheduleData.weekday = Array.isArray(val.weekday) && val.weekday.length > 0
-                ? val.weekday.filter(Boolean)
+                ? clonePeriods(val.weekday)
                 : cloneDefault('weekday');
             scheduleData.weekend = Array.isArray(val.weekend) && val.weekend.length > 0
-                ? val.weekend.filter(Boolean)
+                ? clonePeriods(val.weekend)
                 : cloneDefault('weekend');
         }
         renderScheduleTable();
@@ -64,6 +74,34 @@ function syncInputsToState() {
         list[idx].start = row.querySelector('.input-start').value;
         list[idx].end = row.querySelector('.input-end').value;
     });
+}
+
+function validateScheduleData() {
+    for (const type of ['weekday', 'weekend']) {
+        const label = type === 'weekday' ? '平日課表' : '假日課表';
+        const list = scheduleData[type];
+        if (!list || list.length === 0) {
+            alert(`⚠️ ${label}至少需要有 1 個節次！`);
+            return false;
+        }
+        for (let i = 0; i < list.length; i++) {
+            const p = list[i];
+            if (!p.name) {
+                alert(`⚠️ ${label}第 ${i + 1} 列的「節次名稱」不可空白！`);
+                return false;
+            }
+            if (!p.start || !p.end) {
+                alert(`⚠️ ${label}「${p.name}」的起訖時間不可空白！`);
+                return false;
+            }
+            if (p.start >= p.end) {
+                alert(`⚠️ ${label}「${p.name}」的結束時間必須晚於開始時間！`);
+                return false;
+            }
+            if (!p.id) p.id = `${type === 'weekday' ? 'p' : 'w'}_${i + 1}`;
+        }
+    }
+    return true;
 }
 
 function switchScheduleTab(tab) {
@@ -107,7 +145,6 @@ function addPeriodRow() {
     const list = scheduleData[currentTab];
     const nextNum = list.length + 1;
 
-    // 預設接在最後一節結束時間後 10 分鐘
     let defaultStart = '08:15';
     let defaultEnd = '09:00';
     if (list.length > 0 && list[list.length - 1].end) {
@@ -160,22 +197,7 @@ function resetDefaultSchedule() {
 
 async function saveScheduleConfig() {
     syncInputsToState();
-
-    // 檢查平日與假日資料合法性
-    for (const type of ['weekday', 'weekend']) {
-        const label = type === 'weekday' ? '平日課表' : '假日課表';
-        const list = scheduleData[type];
-        if (!list || list.length === 0) {
-            return alert(`⚠️ ${label}至少需要有 1 個節次！`);
-        }
-        for (let i = 0; i < list.length; i++) {
-            const p = list[i];
-            if (!p.name) return alert(`⚠️ ${label}第 ${i + 1} 列的「節次名稱」不可空白！`);
-            if (!p.start || !p.end) return alert(`⚠️ ${label}「${p.name}」的起訖時間不可空白！`);
-            if (p.start >= p.end) return alert(`⚠️ ${label}「${p.name}」的結束時間必須晚於開始時間！`);
-            if (!p.id) p.id = `${type === 'weekday' ? 'p' : 'w'}_${i + 1}`;
-        }
-    }
+    if (!validateScheduleData()) return;
 
     try {
         await window.db.ref('scheduleConfig').set(scheduleData);
@@ -189,6 +211,230 @@ async function saveScheduleConfig() {
     } catch (err) {
         console.error("儲存課表失敗：", err);
         alert("儲存失敗，請檢查網路連線！");
+    }
+}
+
+// ==================== 存為課表模板 ====================
+function openSaveTemplateModal() {
+    syncInputsToState();
+    if (!validateScheduleData()) return;
+    document.getElementById('newTemplateNameInput').value = '';
+    document.getElementById('saveTemplateModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('newTemplateNameInput').focus(), 50);
+}
+
+function closeSaveTemplateModal() {
+    document.getElementById('saveTemplateModal').style.display = 'none';
+}
+
+async function confirmSaveTemplate() {
+    const name = document.getElementById('newTemplateNameInput').value.trim();
+    if (!name) return alert("⚠️ 請輸入課表模板名稱！");
+
+    const exists = Object.values(scheduleTemplates).some(t => t && t.name === name);
+    if (exists) return alert(`⚠️ 已經有名為「${name}」的課表模板，請換一個名稱或從「課表模板」中編輯！`);
+
+    const id = `tpl_${Date.now()}`;
+    const newTpl = {
+        id,
+        name,
+        weekday: clonePeriods(scheduleData.weekday),
+        weekend: clonePeriods(scheduleData.weekend),
+        updatedAt: Date.now()
+    };
+
+    try {
+        await window.db.ref(`scheduleTemplates/${id}`).set(newTpl);
+        scheduleTemplates[id] = newTpl;
+
+        if (typeof logActivity === 'function') {
+            await logActivity('班級管理', `新增課表模板「${name}」（平日 ${newTpl.weekday.length} 節、假日 ${newTpl.weekend.length} 節）`);
+        }
+
+        closeSaveTemplateModal();
+        alert(`✅ 已成功將目前課表存為模板「${name}」！`);
+    } catch (err) {
+        console.error("儲存課表模板失敗：", err);
+        alert("儲存模板失敗，請檢查網路連線！");
+    }
+}
+
+// ==================== 課表模板管理（下拉選單／使用／編輯／刪除） ====================
+async function openTemplateModal() {
+    try {
+        const snap = await window.db.ref('scheduleTemplates').once('value');
+        scheduleTemplates = snap.val() || {};
+    } catch (err) {
+        console.error("讀取課表模板失敗：", err);
+    }
+
+    cancelEditTemplateBox();
+    renderTemplateDropdown();
+    document.getElementById('templateModal').style.display = 'flex';
+}
+
+function closeTemplateModal() {
+    document.getElementById('templateModal').style.display = 'none';
+    cancelEditTemplateBox();
+}
+
+function renderTemplateDropdown(selectedId = null) {
+    const sel = document.getElementById('templateSelect');
+    const list = Object.values(scheduleTemplates)
+        .filter(Boolean)
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    const hasTemplates = list.length > 0;
+    document.getElementById('btnUseTpl').disabled = !hasTemplates;
+    document.getElementById('btnEditTpl').disabled = !hasTemplates;
+    document.getElementById('btnDeleteTpl').disabled = !hasTemplates;
+
+    if (!hasTemplates) {
+        sel.innerHTML = '<option value="">（尚無已儲存的課表模板）</option>';
+        document.getElementById('templateMetaInfo').innerHTML = '目前尚未建立任何課表模板，請先按「📥 存為課表模板」建立。';
+        return;
+    }
+
+    sel.innerHTML = list.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    if (selectedId && scheduleTemplates[selectedId]) {
+        sel.value = selectedId;
+    }
+    onTemplateSelectChange();
+}
+
+function onTemplateSelectChange() {
+    cancelEditTemplateBox();
+    const id = document.getElementById('templateSelect').value;
+    const tpl = scheduleTemplates[id];
+    const infoEl = document.getElementById('templateMetaInfo');
+
+    if (!tpl) {
+        infoEl.innerHTML = '尚未選擇模板。';
+        return;
+    }
+
+    const wdCount = Array.isArray(tpl.weekday) ? tpl.weekday.length : 0;
+    const weCount = Array.isArray(tpl.weekend) ? tpl.weekend.length : 0;
+    const updatedStr = tpl.updatedAt ? new Date(tpl.updatedAt).toLocaleString() : '-';
+
+    infoEl.innerHTML = `
+        <div><b>模板名稱：</b><span style="color:#ebd29b;">${tpl.name}</span></div>
+        <div><b>內含節數：</b>平日 ${wdCount} 節 ／ 假日 ${weCount} 節</div>
+        <div><b>最後更新：</b>${updatedStr}</div>
+    `;
+}
+
+async function applySelectedTemplate() {
+    const id = document.getElementById('templateSelect').value;
+    const tpl = scheduleTemplates[id];
+    if (!tpl) return alert("請先選擇一個課表模板！");
+
+    if (!confirm(`確定要套用課表模板「${tpl.name}」嗎？\n這將會立即覆蓋目前的平日與假日課表並同步至雲端。`)) return;
+
+    scheduleData = {
+        weekday: clonePeriods(tpl.weekday),
+        weekend: clonePeriods(tpl.weekend)
+    };
+
+    try {
+        await window.db.ref('scheduleConfig').set(scheduleData);
+        if (typeof logActivity === 'function') {
+            await logActivity('班級管理', `套用課表模板「${tpl.name}」`);
+        }
+        renderScheduleTable();
+        closeTemplateModal();
+        alert(`✅ 已套用課表模板「${tpl.name}」並同步至全站！`);
+    } catch (err) {
+        console.error("套用模板失敗：", err);
+        alert("套用失敗，請檢查網路連線！");
+    }
+}
+
+function toggleEditTemplateBox() {
+    const id = document.getElementById('templateSelect').value;
+    const tpl = scheduleTemplates[id];
+    if (!tpl) return;
+
+    const box = document.getElementById('editTemplateBox');
+    if (box.style.display === 'block') {
+        cancelEditTemplateBox();
+        return;
+    }
+
+    document.getElementById('editTemplateNameInput').value = tpl.name;
+    document.getElementById('overwriteTemplateContent').checked = false;
+    box.style.display = 'block';
+    document.getElementById('editTemplateNameInput').focus();
+}
+
+function cancelEditTemplateBox() {
+    document.getElementById('editTemplateBox').style.display = 'none';
+}
+
+async function confirmEditTemplate() {
+    const id = document.getElementById('templateSelect').value;
+    const tpl = scheduleTemplates[id];
+    if (!tpl) return;
+
+    const newName = document.getElementById('editTemplateNameInput').value.trim();
+    if (!newName) return alert("⚠️ 模板名稱不可空白！");
+
+    const duplicate = Object.values(scheduleTemplates).some(t => t && t.id !== id && t.name === newName);
+    if (duplicate) return alert(`⚠️ 已經有名為「${newName}」的課表模板！`);
+
+    const overwriteContent = document.getElementById('overwriteTemplateContent').checked;
+    if (overwriteContent) {
+        syncInputsToState();
+        if (!validateScheduleData()) return;
+    }
+
+    const oldName = tpl.name;
+    const updatedTpl = {
+        ...tpl,
+        name: newName,
+        weekday: overwriteContent ? clonePeriods(scheduleData.weekday) : clonePeriods(tpl.weekday),
+        weekend: overwriteContent ? clonePeriods(scheduleData.weekend) : clonePeriods(tpl.weekend),
+        updatedAt: Date.now()
+    };
+
+    try {
+        await window.db.ref(`scheduleTemplates/${id}`).set(updatedTpl);
+        scheduleTemplates[id] = updatedTpl;
+
+        if (typeof logActivity === 'function') {
+            const note = overwriteContent ? '並覆蓋更新課表內容' : '';
+            await logActivity('班級管理', `編輯課表模板「${oldName}」➔「${newName}」${note}`);
+        }
+
+        cancelEditTemplateBox();
+        renderTemplateDropdown(id);
+        alert(`✅ 課表模板「${newName}」已更新！`);
+    } catch (err) {
+        console.error("編輯課表模板失敗：", err);
+        alert("更新失敗，請檢查網路連線！");
+    }
+}
+
+async function deleteSelectedTemplate() {
+    const id = document.getElementById('templateSelect').value;
+    const tpl = scheduleTemplates[id];
+    if (!tpl) return;
+
+    if (!confirm(`⚠️ 確定要永久刪除課表模板「${tpl.name}」嗎？`)) return;
+
+    try {
+        await window.db.ref(`scheduleTemplates/${id}`).remove();
+        delete scheduleTemplates[id];
+
+        if (typeof logActivity === 'function') {
+            await logActivity('班級管理', `刪除課表模板「${tpl.name}」`);
+        }
+
+        renderTemplateDropdown();
+        alert(`🗑️ 已刪除課表模板「${tpl.name}」。`);
+    } catch (err) {
+        console.error("刪除課表模板失敗：", err);
+        alert("刪除失敗，請檢查網路連線！");
     }
 }
 
